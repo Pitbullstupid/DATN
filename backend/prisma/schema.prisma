@@ -1,0 +1,145 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ------------------------------------------------------
+// ENUMS
+// ------------------------------------------------------
+
+enum Role {
+  STUDENT
+  TUTOR
+  ADMIN
+}
+
+enum ClassStatus {
+  OPEN
+  MATCHED
+  COMPLETED
+}
+
+enum RequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+// ------------------------------------------------------
+// MODELS
+// ------------------------------------------------------
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  gender    String?
+  avatar    String?
+  role      Role
+
+  // Tutor info
+  educationLevel String?
+  averageRating  Float @default(0)
+
+  // 👇 Classes do user tạo
+  createdClasses Class[] @relation("CreatedClasses")
+
+  // 👇 Quan hệ MATCH (đã ghép)
+  classesAsStudent Class[] @relation("StudentJoin")
+  classesAsTutor   Class[] @relation("TutorJoin")
+
+  // 👇 Request gửi đi
+  joinRequests JoinRequest[]
+
+  // 👇 Review
+  reviewsGiven     Review[] @relation("StudentReviews")
+  reviewsReceived  Review[] @relation("TutorReviews")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Class {
+  id          String      @id @default(uuid())
+  title       String?
+  subject     String
+  location    String
+  price       Float
+
+  // 👇 schedule chuẩn hóa
+  startTime   DateTime
+  endTime     DateTime
+  days        String // VD: "T2,T4,T6"
+
+  description  String?
+  requirements String?
+
+  status      ClassStatus @default(OPEN)
+
+  // 👇 Người tạo lớp (QUAN TRỌNG)
+  createdById String
+  createdBy   User @relation("CreatedClasses", fields: [createdById], references: [id])
+
+  // 👇 Sau khi MATCH
+  studentId String?
+  student   User? @relation("StudentJoin", fields: [studentId], references: [id])
+
+  tutorId   String?
+  tutor     User? @relation("TutorJoin", fields: [tutorId], references: [id])
+
+  // 👇 Request
+  requests JoinRequest[]
+
+  // 👇 Review
+  reviews Review[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model JoinRequest {
+  id          String        @id @default(uuid())
+
+  classId     String
+  class       Class         @relation(fields: [classId], references: [id])
+
+  requesterId String
+  requester   User          @relation(fields: [requesterId], references: [id])
+
+  status      RequestStatus @default(PENDING)
+  message     String?
+
+  acceptedAt  DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 👇 chống spam request
+  @@unique([classId, requesterId])
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  rating    Int
+  comment   String?
+
+  tutorId   String
+  tutor     User     @relation("TutorReviews", fields: [tutorId], references: [id])
+
+  studentId String
+  student   User     @relation("StudentReviews", fields: [studentId], references: [id])
+
+  classId   String?
+  class     Class?   @relation(fields: [classId], references: [id])
+
+  createdAt DateTime @default(now())
+}
