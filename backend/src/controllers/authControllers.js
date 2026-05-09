@@ -28,6 +28,7 @@ const register = async (req, res) => {
       email,
       password: hashedPassword,
       role,
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0ea5e9&color=fff`,
     },
   });
 
@@ -35,12 +36,14 @@ const register = async (req, res) => {
   const token = generateToken(newUser.id, res);
   res.status(201).json({
     status: "success",
+    message: "Đăng ký thành công!",
     data: {
       user: {
         id: newUser.id,
         name: newUser.name,
         email: newUser.email,
         role: newUser.role,
+        avatar: newUser.avatar,
       },
       token,
     },
@@ -70,11 +73,14 @@ const login = async (req, res) => {
 
   res.status(200).json({
     status: "success",
+    message: "Đăng nhập thành công!",
     data: {
       user: {
         id: user.id,
+        name: user.name,
         email: user.email,
         role: user.role,
+        avatar: user.avatar,
       },
       token,
     },
