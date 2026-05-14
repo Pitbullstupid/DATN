@@ -7,28 +7,37 @@ import { FaUser } from "react-icons/fa";
 import { FaMoneyBillTransfer } from "react-icons/fa6";
 import { MdSubject } from "react-icons/md";
 import { GrUserExpert } from "react-icons/gr";
-
-const stats = [
-  { icon: <FaUser size={20}/>, value: "1K+", label: "Users" },
-  { icon: <GrUserExpert size={20}/>, value: "300+", label: "Tutors" },
-  {
-    icon: <FaMoneyBillTransfer size={20}/>,
-    value: "$500M+",
-    label: "Total Transaction",
-  },
-
-  { icon: <MdSubject />, value: "50+", label: "Total Subjects" },
-];
+import { useTranslation } from "react-i18next";
 
 const Banner = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleGetStarted = () => {
-    if (user?.role === "STUDENT") navigate("/tutors");
-    else if (user?.role === "TUTOR") navigate("/profile");
+    if (user?.role === "STUDENT") navigate("/search");
+    else if (user?.role === "TUTOR") navigate("/tutor/dashboard");
     else document.getElementById("modal_login").showModal();
   };
+  const stats = [
+    { icon: <FaUser size={20} />, value: "1K+", label: t("stats_bar.user") },
+    {
+      icon: <GrUserExpert size={20} />,
+      value: "300+",
+      label: t("stats_bar.tutor"),
+    },
+    {
+      icon: <FaMoneyBillTransfer size={20} />,
+      value: "$500M+",
+      label: t("stats_bar.total"),
+    },
+
+    {
+      icon: <MdSubject size={20} />,
+      value: "50+",
+      label: t("stats_bar.subject"),
+    },
+  ];
 
   return (
     <div>
@@ -41,25 +50,24 @@ const Banner = () => {
         <div className="flex-1 pb-14 pr-0 md:pr-8 relative z-10">
           <span className="inline-flex items-center gap-2 text-xs font-semibold tracking-wider text-primary bg-primary/20 px-4 py-1.5 rounded-full mb-5">
             <FaBookOpenReader />
-            Learn, learn more, learn forever
+            {t("banner.sub_title")}
           </span>
 
           <h1 className="text-[clamp(1.75rem,4vw,2.75rem)] font-extrabold text-base leading-tight mb-5">
-            Getting Best Quality
+            {t("banner.title")}
             <br />
-            Education is Now <span className="text-primary">More Easier</span>
+            <span className="text-primary">{t("banner.highlight_title")}</span>
           </h1>
 
           <p className="text-sm md:text-base text-gray-500 leading-relaxed mb-8 max-w-md">
-            Unlocking the true potential of education providers through
-            cutting-edge technology!
+            {t("banner.description")}
           </p>
 
           <button
             className="bg-primary hover:bg-primary/80 active:scale-95 transition-all text-white font-bold px-10 py-3.5 rounded-xl text-sm md:text-base"
             onClick={handleGetStarted}
           >
-            Get Started
+            {t("banner.get_started")}
           </button>
         </div>
 
@@ -78,10 +86,10 @@ const Banner = () => {
         {/* Header */}
         <div className="text-center mb-10">
           <h2 className="text-primary-content text-3xl md:text-4xl font-extrabold mb-2">
-            Our Great Achievement
+            {t("stats_bar.title")}
           </h2>
           <p className="text-primary-content/70 text-sm md:text-base">
-            Building Trust with Our Impact in Education
+            {t("stats_bar.sub_title")}
           </p>
         </div>
 

@@ -4,11 +4,12 @@ import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import { Toaster } from "react-hot-toast";
 import { FcGoogle } from "react-icons/fc";
+import { useTranslation } from "react-i18next";
 
 const ModalLogin = ({ mode, onSwitchMode }) => {
-  const { login, register } = useAuth();
+  const { login, register, user } = useAuth();
+  const { t } = useTranslation();
   const [rememberMe, setRememberMe] = useState(false);
-
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -67,7 +68,7 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
           },
         );
       }
-      closeModal();
+      document.getElementById("modal_login").close();
     } finally {
       setLoading(false);
     }
@@ -96,11 +97,11 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
               {mode === "signup" && (
                 <>
                   <label className="floating-label">
-                    <span>Full Name *</span>
+                    <span>{t("login.name")} *</span>
                     <input
                       type="text"
                       name="name"
-                      placeholder="Full Name"
+                      placeholder={t("login.name")}
                       className="input input-bordered w-full"
                       value={form.name}
                       onChange={handleChange}
@@ -114,18 +115,18 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
                     value={form.role}
                     onChange={handleChange}
                   >
-                    <option value="STUDENT">Học sinh</option>
-                    <option value="TUTOR">Gia sư</option>
+                    <option value="STUDENT">{t("login.role_student")}</option>
+                    <option value="TUTOR">{t("login.role_tutor")}</option>
                   </select>
                 </>
               )}
 
               <label className="floating-label">
-                <span>Email Address *</span>
+                <span>{t("login.email")} *</span>
                 <input
                   type="email"
                   name="email"
-                  placeholder="Email Address"
+                  placeholder={t("login.email")}
                   className="input input-bordered w-full"
                   value={form.email}
                   onChange={handleChange}
@@ -133,11 +134,11 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
               </label>
 
               <label className="floating-label">
-                <span>Password *</span>
+                <span>{t("login.password")} *</span>
                 <input
                   type="password"
                   name="password"
-                  placeholder="Password"
+                  placeholder={t("login.password")}
                   className="input input-bordered w-full"
                   value={form.password}
                   onChange={handleChange}
@@ -146,11 +147,11 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
 
               {mode === "signup" && (
                 <label className="floating-label">
-                  <span>Confirm Password *</span>
+                  <span>{t("login.confirm_password")} *</span>
                   <input
                     type="password"
                     name="confirmPassword"
-                    placeholder="Confirm Password"
+                    placeholder={t("login.confirm_password")}
                     className="input input-bordered w-full"
                     value={form.confirmPassword}
                     onChange={handleChange}
@@ -166,7 +167,7 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
                   />
-                  <span className="text-sm">Remember me</span>
+                  <span className="text-sm">{t("login.btn_remember")}</span>
                 </label>
               )}
 
@@ -178,20 +179,20 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
                 {loading ? (
                   <span className="loading loading-spinner loading-sm" />
                 ) : mode === "login" ? (
-                  "LOG IN"
+                  t("login.btn_login")
                 ) : (
-                  "SIGN UP"
+                  t("login.btn_register")
                 )}
               </button>
 
               <button type="button" className="btn btn-outline w-full gap-2">
-                  <FcGoogle size={20}/> Sign in with Google
-                </button>
+                <FcGoogle size={20} /> {t("login.btn_login_with_google")}
+              </button>
 
               <div className="flex justify-between text-sm">
                 {mode === "login" ? (
                   <>
-                    <a className="link link-error">Forgot password?</a>
+                    <a className="link link-error">{t("login.btn_forgot_password")}</a>
                     <button
                       type="button"
                       className="link link-info"
@@ -199,7 +200,7 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
                         onSwitchMode("signup");
                       }}
                     >
-                      Don't have an account? Sign Up
+                      {t("login.btn_register1")}
                     </button>
                   </>
                 ) : (
@@ -210,7 +211,7 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
                       onSwitchMode("login");
                     }}
                   >
-                    Already have an account? Log in
+                    {t("login.btn_login1")}
                   </button>
                 )}
               </div>

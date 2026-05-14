@@ -5,9 +5,14 @@ import { generateToken } from "../utils/generateToken.js";
 const register = async (req, res) => {
   const { name, email, password, role } = req.body;
 
+  // Validate role
+  if (role !== "STUDENT" && role !== "TUTOR") {
+    return res.status(400).json({ message: "Vai trò không hợp lệ" });
+  }
+
   // User exists
   const existingUser = await prisma.user.findUnique({
-    where: { email: email },
+    where: { email },
   });
   if (existingUser) {
     return res.status(400).json({ message: "Email đã tồn tại" });
@@ -16,24 +21,34 @@ const register = async (req, res) => {
   // Hash Password
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  //validate role
-  if (role !== "STUDENT" && role !== "TUTOR") {
-    return res.status(400).json({ message: "Vai trò không hợp lệ" });
-  }
+  // Create user + tutor profile trong 1 transaction
+  const newUser = await prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        role,
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0ea5e9&color=fff`,
+      },
+    });
 
-  // Create new user
-  const newUser = await prisma.user.create({
-    data: {
-      name,
-      email,
-      password: hashedPassword,
-      role,
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0ea5e9&color=fff`,
-    },
+    // Nếu là TUTOR thì tạo profile trống luôn
+    if (role === "TUTOR") {
+      await tx.tutorProfile.create({
+        data: {
+          userId: user.id,
+          status: "PENDING", // chưa điền gì
+        },
+      });
+    }
+
+    return user;
   });
 
   // Generate token
   const token = generateToken(newUser.id, res);
+
   res.status(201).json({
     status: "success",
     message: "Đăng ký thành công!",
@@ -46,6 +61,8 @@ const register = async (req, res) => {
         avatar: newUser.avatar,
       },
       token,
+      // Frontend dựa vào redirect này để điều hướng
+      redirect: role === "TUTOR" ? "/tutor/dashboard" : "/",
     },
   });
 };
@@ -53,22 +70,31 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   const { email, password } = req.body;
 
-  // User exists
   const user = await prisma.user.findUnique({
-    where: { email: email },
+    where: { email },
+    // Lấy kèm tutorProfile để kiểm tra status khi login
+    include: {
+      tutorProfile: {
+        select: { status: true },
+      },
+    },
   });
 
   if (!user) {
     return res.status(400).json({ message: "Email hoặc mật khẩu không đúng" });
   }
 
-  // Check password
   const isPasswordValid = await bcrypt.compare(password, user.password);
   if (!isPasswordValid) {
     return res.status(400).json({ message: "Email hoặc mật khẩu không đúng" });
   }
 
-  // Generate token
+  // Xác định redirect khi login dựa trên trạng thái profile gia sư
+  let redirect = "/";
+  if (user.role === "TUTOR") {
+    redirect = "/tutor/dashboard";
+  }
+
   const token = generateToken(user.id, res);
 
   res.status(200).json({
@@ -81,8 +107,10 @@ const login = async (req, res) => {
         email: user.email,
         role: user.role,
         avatar: user.avatar,
+        tutorStatus: user.tutorProfile?.status ?? null,
       },
       token,
+      redirect,
     },
   });
 };

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { FaPalette } from "react-icons/fa";
 
 const ThemeSelector = () => {
   const THEMES = [
@@ -37,8 +38,8 @@ const ThemeSelector = () => {
   }, [theme]);
   return (
     <div className="dropdown dropdown-end">
-      <div tabIndex={0} role="button" className="btn btn-neutral mr-2">
-        <span className="hidden sm:inline">Theme</span>
+      <div tabIndex={0} role="button" className="btn btn-primary mr-2">
+        <span className="hidden sm:inline"><FaPalette /></span>
       </div>
 
       <ul

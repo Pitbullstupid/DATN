@@ -1,8 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -22,20 +20,43 @@ enum Role {
 }
 
 enum ClassStatus {
-  OPEN
-  MATCHED
-  COMPLETED
-}
-
-enum RequestStatus {
   PENDING
-  ACCEPTED
-  REJECTED
+  CONFIRMED
+  ONGOING
+  COMPLETED
+  CANCELLED
 }
 
-// ------------------------------------------------------
-// MODELS
-// ------------------------------------------------------
+enum TutorStatus {
+  PENDING     // vừa đăng ký, chưa điền profile
+  INCOMPLETE  // đã điền một phần profile
+  REVIEWING   // đã submit profile, chờ admin duyệt
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum TutoringStyle {
+  ONE_ON_ONE
+  GROUP
+  BOTH
+}
+
+enum TimingShift {
+  MORNING
+  AFTERNOON
+  EVENING
+  FLEXIBLE
+}
+
+enum BookingStatus {
+  PENDING    // Student vừa gửi, chờ Tutor xem
+  ACCEPTED   // Tutor chấp nhận
+  REJECTED   // Tutor từ chối
+  CANCELLED  // Student tự huỷ
+}
+
+// ================== USER ==================
 
 model User {
   id        String   @id @default(uuid())
@@ -45,101 +66,213 @@ model User {
   gender    String?
   avatar    String?
   role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  // Tutor info
-  educationLevel String?
-  averageRating  Float @default(0)
+  tutorProfile   TutorProfile?
+  studentClasses ClassSession[]  @relation("StudentClasses")
+  messages       Message[]
+  reviews        Review[]        @relation("StudentReviews")
+  bookingsSent   BookingRequest[] @relation("StudentBookings")
 
-  // 👇 Classes do user tạo
-  createdClasses Class[] @relation("CreatedClasses")
+  @@map("users")
+}
 
-  // 👇 Quan hệ MATCH (đã ghép)
-  classesAsStudent Class[] @relation("StudentJoin")
-  classesAsTutor   Class[] @relation("TutorJoin")
+// ================== TUTOR PROFILE ==================
 
-  // 👇 Request gửi đi
-  joinRequests JoinRequest[]
+model TutorProfile {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // 👇 Review
-  reviewsGiven     Review[] @relation("StudentReviews")
-  reviewsReceived  Review[] @relation("TutorReviews")
+  // ---------- Bước 1: Thông tin cá nhân ----------
+  bio     String?
+  phone   String?
+  address String?
+  country String?
+
+  // ---------- Bước 2: Thông tin dạy học ----------
+  subjects        String[]
+  preferredAreas  String[]
+  daysPerWeek     Int?
+  timingShift     TimingShift?
+  pricePerHour    Float?
+  tutoringStyle   TutoringStyle?
+  experience      Int?
+  tuitionDuration Int?
+  languages       String[]
+
+  // ---------- Bước 3: Bằng cấp / Học vấn ----------
+  qualification String?
+  certificate   String?
+
+  // ---------- Social Media ----------
+  socialMedia TutorSocialMedia?
+
+  // ---------- Education ----------
+  educations TutorEducation[]
+
+  // ---------- Trạng thái hồ sơ ----------
+  status    TutorStatus @default(PENDING)
+  adminNote String?
+
+  // ---------- Thống kê ----------
+  rating       Float @default(0)
+  totalReviews Int   @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  classes         ClassSession[]
+  schedules       TutorSchedule[]
+  reviews         Review[]
+  bookingRequests BookingRequest[]  // ← thêm
+
+  @@map("tutor_profiles")
 }
 
-model Class {
-  id          String      @id @default(uuid())
-  title       String?
+// ================== TUTOR EDUCATION ==================
+
+model TutorEducation {
+  id             String       @id @default(uuid())
+  tutorProfileId String
+  tutorProfile   TutorProfile @relation(fields: [tutorProfileId], references: [id], onDelete: Cascade)
+
+  universityName String
+  fieldOfStudy   String
+  passingYear    Int
+  result         String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tutor_educations")
+}
+
+// ================== TUTOR SOCIAL MEDIA ==================
+
+model TutorSocialMedia {
+  id             String       @id @default(uuid())
+  tutorProfileId String       @unique
+  tutorProfile   TutorProfile @relation(fields: [tutorProfileId], references: [id], onDelete: Cascade)
+
+  facebook  String?
+  twitter   String?
+  youtube   String?
+  instagram String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tutor_social_media")
+}
+
+// ================== BOOKING REQUEST ==================
+
+model BookingRequest {
+  id             String        @id @default(uuid())
+
+  // Ai gửi
+  studentId      String
+  student        User          @relation("StudentBookings", fields: [studentId], references: [id], onDelete: Cascade)
+
+  // Gửi cho ai
+  tutorProfileId String
+  tutorProfile   TutorProfile  @relation(fields: [tutorProfileId], references: [id], onDelete: Cascade)
+
+  // Form Student điền
+  name           String        // có thể khác tên tài khoản
+  email          String        // có thể khác email tài khoản
+  subject        String
+  message        String
+
+  // Phản hồi của Tutor
+  status         BookingStatus @default(PENDING)
+  tutorNote      String?       // lý do accept / reject
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Nếu Tutor ACCEPTED → tạo ClassSession từ booking này
+  classSession   ClassSession?
+
+  @@map("booking_requests")
+}
+
+// ================== CLASS SESSION ==================
+
+model ClassSession {
+  id             String       @id @default(uuid())
+  studentId      String
+  student        User         @relation("StudentClasses", fields: [studentId], references: [id])
+  tutorProfileId String
+  tutorProfile   TutorProfile @relation(fields: [tutorProfileId], references: [id])
+
+  // Liên kết ngược về booking đã tạo ra session này (nullable)
+  bookingRequestId String?        @unique
+  bookingRequest   BookingRequest? @relation(fields: [bookingRequestId], references: [id])
+
   subject     String
-  location    String
-  price       Float
-
-  // 👇 schedule chuẩn hóa
-  startTime   DateTime
-  endTime     DateTime
-  days        String // VD: "T2,T4,T6"
-
-  description  String?
-  requirements String?
-
-  status      ClassStatus @default(OPEN)
-
-  // 👇 Người tạo lớp (QUAN TRỌNG)
-  createdById String
-  createdBy   User @relation("CreatedClasses", fields: [createdById], references: [id])
-
-  // 👇 Sau khi MATCH
-  studentId String?
-  student   User? @relation("StudentJoin", fields: [studentId], references: [id])
-
-  tutorId   String?
-  tutor     User? @relation("TutorJoin", fields: [tutorId], references: [id])
-
-  // 👇 Request
-  requests JoinRequest[]
-
-  // 👇 Review
-  reviews Review[]
+  status      ClassStatus @default(PENDING)
+  scheduledAt DateTime
+  durationMin Int         @default(60)
+  note        String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  review   Review?
+  messages Message[]
+
+  @@map("class_sessions")
 }
 
-model JoinRequest {
-  id          String        @id @default(uuid())
-
-  classId     String
-  class       Class         @relation(fields: [classId], references: [id])
-
-  requesterId String
-  requester   User          @relation(fields: [requesterId], references: [id])
-
-  status      RequestStatus @default(PENDING)
-  message     String?
-
-  acceptedAt  DateTime?
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // 👇 chống spam request
-  @@unique([classId, requesterId])
-}
+// ================== REVIEW ==================
 
 model Review {
-  id        String   @id @default(uuid())
+  id             String       @id @default(uuid())
+  classSessionId String       @unique
+  classSession   ClassSession @relation(fields: [classSessionId], references: [id])
+  studentId      String
+  student        User         @relation("StudentReviews", fields: [studentId], references: [id])
+  tutorProfileId String
+  tutorProfile   TutorProfile @relation(fields: [tutorProfileId], references: [id])
+
   rating    Int
   comment   String?
+  createdAt DateTime @default(now())
 
-  tutorId   String
-  tutor     User     @relation("TutorReviews", fields: [tutorId], references: [id])
+  @@map("reviews")
+}
 
-  studentId String
-  student   User     @relation("StudentReviews", fields: [studentId], references: [id])
+// ================== MESSAGE ==================
 
-  classId   String?
-  class     Class?   @relation(fields: [classId], references: [id])
+model Message {
+  id             String       @id @default(uuid())
+  classSessionId String
+  classSession   ClassSession @relation(fields: [classSessionId], references: [id])
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id])
+
+  content   String
+  createdAt DateTime @default(now())
+
+  @@map("messages")
+}
+
+// ================== TUTOR SCHEDULE ==================
+
+model TutorSchedule {
+  id             String       @id @default(uuid())
+  tutorProfileId String
+  tutorProfile   TutorProfile @relation(fields: [tutorProfileId], references: [id], onDelete: Cascade)
+
+  dayOfWeek  Int      // 0 = CN, 1 = T2, ..., 6 = T7
+  startTime  String   // "08:00"
+  endTime    String   // "10:00"
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tutor_schedules")
 }

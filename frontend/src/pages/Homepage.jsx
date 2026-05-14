@@ -6,7 +6,7 @@ import Subjects from '../components/Subjects'
 
 const Homepage = () => {
   return (
-    <div className='h-1000'>
+    <div className='h-1000 overflow-x-hidden'>
       <Banner/>
       <SlidingImages1/>
       <SlidingSchools/>

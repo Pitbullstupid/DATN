@@ -7,14 +7,26 @@ import { useAuth } from "../context/AuthContext";
 import avatar from "../assets/DefaultAvatar.jpg";
 import { CgProfile } from "react-icons/cg";
 import { LuLogOut } from "react-icons/lu";
+import { useTranslation } from "react-i18next";
+import { MdLanguage } from "react-icons/md";
 
 const Navbar = () => {
   const [modalMode, setModalMode] = useState("login");
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { i18n, t } = useTranslation();
   const openModal = (mode) => {
     setModalMode(mode);
     document.getElementById("modal_login").showModal();
+  };
+  const handleClickProfile = () => {
+    user?.role === "TUTOR"
+      ? navigate("/tutor/dashboard")
+      : navigate("/profile");
+  };
+  const language = i18n.language;
+  const changeLanguage = (lng) => {
+    i18n.changeLanguage(lng);
   };
 
   return (
@@ -43,7 +55,7 @@ const Navbar = () => {
             className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow"
           >
             <li>
-              <a>Item 1</a>
+              <a>{t("login.dashboard")}</a>
             </li>
             <li>
               <a>Parent</a>
@@ -57,7 +69,7 @@ const Navbar = () => {
               </ul>
             </li>
             <li>
-              <a>Item 3</a>
+              <a>Tutor</a>
             </li>
           </ul>
         </div>
@@ -69,7 +81,7 @@ const Navbar = () => {
       <div className="navbar-center hidden lg:flex">
         <ul className="menu menu-horizontal px-1">
           <li>
-            <a>Item 1</a>
+            <a>{t("login.dashboard")}</a>
           </li>
           <li>
             <details>
@@ -79,7 +91,7 @@ const Navbar = () => {
                   <a>Submenu 1</a>
                 </li>
                 <li>
-                  <a>Submenu 2</a>
+                  <a>Tutor</a>
                 </li>
               </ul>
             </details>
@@ -92,6 +104,30 @@ const Navbar = () => {
 
       <div className="navbar-end gap-2">
         <ThemeSelector />
+
+        <div className="dropdown dropdown-center">
+          <div
+            tabIndex={0}
+            role="button"
+            className="btn m-1 btn-square sm:w-36 sm:btn-auto justify-center sm:justify-center"
+          >
+            <MdLanguage className="text-lg" />
+            <span className="hidden sm:inline">
+              {language === "en" ? "English" : "Tiếng Việt"}
+            </span>
+          </div>
+          <ul
+            tabIndex="-1"
+            className="dropdown-content menu bg-base-100 rounded-box z-1 w-35 p-2 shadow-sm"
+          >
+            <li>
+              <button onClick={() => changeLanguage("en")}>English</button>
+            </li>
+            <li>
+              <button onClick={() => changeLanguage("vi")}>Tiếng Việt</button>
+            </li>
+          </ul>
+        </div>
 
         {user ? (
           // Đã đăng nhập → hiển thị avatar + dropdown
@@ -119,9 +155,9 @@ const Navbar = () => {
                   </span>
                 </li>
                 <li>
-                  <Link to="/profile">
-                    <CgProfile /> Hồ sơ
-                  </Link>
+                  <button onClick={handleClickProfile}>
+                    <CgProfile /> {t("login.btn_profile")}
+                  </button>
                 </li>
                 <li>
                   <button
@@ -130,7 +166,7 @@ const Navbar = () => {
                       logout();
                     }}
                   >
-                    <LuLogOut /> Đăng xuất
+                    <LuLogOut /> {t("login.btn_logout")}
                   </button>
                 </li>
               </ul>
@@ -140,13 +176,13 @@ const Navbar = () => {
           // Chưa đăng nhập → hiển thị nút Login / Sign Up
           <>
             <button className="btn btn-info" onClick={() => openModal("login")}>
-              Login
+              {t("login.btn_login")}
             </button>
             <button
               className="btn btn-secondary"
               onClick={() => openModal("signup")}
             >
-              Sign Up
+              {t("login.btn_register")}
             </button>
           </>
         )}
