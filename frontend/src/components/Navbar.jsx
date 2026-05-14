@@ -55,7 +55,9 @@ const Navbar = () => {
             className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow"
           >
             <li>
-              <a>{t("login.dashboard")}</a>
+              <a onClick={() => navigate("/")}>
+                {t("login.dashboard")}
+              </a>
             </li>
             <li>
               <a>Parent</a>
@@ -69,7 +71,7 @@ const Navbar = () => {
               </ul>
             </li>
             <li>
-              <a>Tutor</a>
+              <a onClick={() => navigate("/tutors")}>Tutor</a>
             </li>
           </ul>
         </div>
@@ -81,7 +83,9 @@ const Navbar = () => {
       <div className="navbar-center hidden lg:flex">
         <ul className="menu menu-horizontal px-1">
           <li>
-            <a>{t("login.dashboard")}</a>
+            <a onClick={() => navigate("/")}>
+              {t("login.dashboard")}
+            </a>
           </li>
           <li>
             <details>
@@ -97,7 +101,7 @@ const Navbar = () => {
             </details>
           </li>
           <li>
-            <a>Item 3</a>
+            <a onClick={() => navigate("/tutors")}>Tutor</a>
           </li>
         </ul>
       </div>

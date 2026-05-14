@@ -3,6 +3,8 @@ import { Routes, Route } from 'react-router-dom'
 import Homepage from './pages/Homepage.jsx'
 import TutorDashboard from './pages/TutorDashboard.jsx'
 import TutorProfileEdit from './pages/TutorProfileEdit.jsx'
+import TutorListPage from './pages/TutorListPage.jsx'
+import TutorDetailPage from './pages/TutorDetailPage.jsx'
 function App() {
   return (
     <div className="min-h-screen bg-base-100">
@@ -12,6 +14,8 @@ function App() {
           <Route path="/" element={<Homepage />} />
           <Route path="/tutor/dashboard"     element={<TutorDashboard />} />
           <Route path="/tutor/profile/edit" element={<TutorProfileEdit />} />
+          <Route path="/tutors" element={<TutorListPage />} />
+          <Route path="/tutors/:id" element={<TutorDetailPage />} />
         </Routes>
       </main>
     </div>

@@ -370,6 +370,7 @@ export const getAllTutors = async (req, res) => {
           experience: true,
           rating: true,
           totalReviews: true,
+          daysPerWeek: true,
           user: {
             select: { id: true, name: true, avatar: true, gender: true },
           },
