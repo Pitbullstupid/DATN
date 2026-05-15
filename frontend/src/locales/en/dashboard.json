@@ -1,0 +1,56 @@
+{
+  "portal": "Tutor Portal",
+  "title": "Dashboard",
+  "load_error": "Could not load tutor profile.",
+  "not_updated": "Not updated",
+  "profile_status": {
+    "PENDING": "Incomplete",
+    "INCOMPLETE": "In Progress",
+    "REVIEWING": "Under Review",
+    "APPROVED": "Approved",
+    "REJECTED": "Rejected",
+    "SUSPENDED": "Suspended"
+  },
+  "info": {
+    "join_date": "Join Date",
+    "email": "Email",
+    "mobile": "Mobile",
+    "address": "Address"
+  },
+  "stats": {
+    "hiring_request": "Hiring Request",
+    "pending": "pending",
+    "total_booking": "Total Booking",
+    "all_time": "all time",
+    "accepted": "Accepted",
+    "sessions": "sessions",
+    "rating": "Rating",
+    "reviews": "{{count}} reviews",
+    "total_payment": "Total Payment",
+    "usd": "USD",
+    "total_ticket": "Total Ticket",
+    "tickets": "tickets"
+  },
+  "profile": {
+    "edit": "Edit Profile",
+    "incomplete_title": "Profile Incomplete",
+    "incomplete_desc": "Complete your profile to get approved and start receiving students.",
+    "complete_now": "Complete Now"
+  },
+  "table": {
+    "title": "Hiring Request Message",
+    "subtitle": "Students who sent a hiring request",
+    "pending_badge": "{{count}} pending",
+    "view_all": "View all →",
+    "no_pending": "No pending requests",
+    "student": "Student",
+    "subject": "Subject",
+    "message": "Message",
+    "status": "Status",
+    "action": "Action",
+    "accept": "Accept",
+    "reject": "Reject",
+    "view_all_count": "View all {{count}} requests →"
+  },
+  "default_name": "Tutor"
+}

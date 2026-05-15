@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Form } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useTranslation } from "react-i18next";
 import {
   FaFacebookF,
   FaTwitter,
@@ -20,7 +21,6 @@ import {
 } from "react-icons/fa";
 import FormRequestTutor from "../components/FormRequestTutor";
 
-// ─── Axios instance ───────────────────────────────────────────────────────────
 const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
   withCredentials: true,
@@ -31,23 +31,19 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-const TIMING_LABEL = {
-  MORNING: "Morning",
-  AFTERNOON: "Afternoon",
-  EVENING: "Evening",
-  FLEXIBLE: "Flexible",
+const TIMING_KEYS = {
+  MORNING: "filters.morning",
+  AFTERNOON: "filters.afternoon",
+  EVENING: "filters.evening",
+  FLEXIBLE: "filters.flexible",
 };
 
-const STYLE_LABEL = {
-  ONE_ON_ONE: "Private Tuition",
-  GROUP: "Group Tuition",
-  BOTH: "Private & Group",
+const STYLE_KEYS = {
+  ONE_ON_ONE: "detail.private",
+  GROUP: "detail.group",
+  BOTH: "detail.both",
 };
 
-// ─── Info row ─────────────────────────────────────────────────────────────────
 const InfoRow = ({ label, value }) => {
   if (!value && value !== 0) return null;
   return (
@@ -60,25 +56,27 @@ const InfoRow = ({ label, value }) => {
   );
 };
 
-// ─── Education card ───────────────────────────────────────────────────────────
-const EduCard = ({ edu }) => (
-  <div className="flex gap-4 items-start p-4 bg-base-200/50 rounded-xl">
-    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-      <FaGraduationCap className="text-primary" size={18} />
+const EduCard = ({ edu }) => {
+  const { t } = useTranslation("tutors");
+  return (
+    <div className="flex gap-4 items-start p-4 bg-base-200/50 rounded-xl">
+      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+        <FaGraduationCap className="text-primary" size={18} />
+      </div>
+      <div>
+        <p className="font-semibold text-base-content text-sm">
+          {edu.universityName}
+        </p>
+        <p className="text-base-content/60 text-xs mt-0.5">{edu.fieldOfStudy}</p>
+        <p className="text-base-content/40 text-xs mt-1">
+          {t("detail.result")} : {edu.result} &nbsp; {t("detail.pass_year")} :{" "}
+          {edu.passingYear}
+        </p>
+      </div>
     </div>
-    <div>
-      <p className="font-semibold text-base-content text-sm">
-        {edu.universityName}
-      </p>
-      <p className="text-base-content/60 text-xs mt-0.5">{edu.fieldOfStudy}</p>
-      <p className="text-base-content/40 text-xs mt-1">
-        Result : {edu.result} &nbsp; Pass Year : {edu.passingYear}
-      </p>
-    </div>
-  </div>
-);
+  );
+};
 
-// ─── Review card ─────────────────────────────────────────────────────────────
 const ReviewCard = ({ review }) => (
   <div className="p-4 bg-base-200/40 rounded-xl">
     <div className="flex items-center gap-3 mb-2">
@@ -113,20 +111,21 @@ const ReviewCard = ({ review }) => (
   </div>
 );
 
-// ─── Schedule badge ───────────────────────────────────────────────────────────
-const ScheduleBadge = ({ schedule }) => (
-  <div className="flex items-center gap-2 px-3 py-2 bg-base-200 rounded-lg text-xs">
-    <FaCalendarAlt className="text-primary" size={11} />
-    <span className="font-medium text-base-content">
-      {DAY_NAMES[schedule.dayOfWeek]}
-    </span>
-    <span className="text-base-content/50">
-      {schedule.startTime} – {schedule.endTime}
-    </span>
-  </div>
-);
+const ScheduleBadge = ({ schedule }) => {
+  const { t } = useTranslation("tutors");
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 bg-base-200 rounded-lg text-xs">
+      <FaCalendarAlt className="text-primary" size={11} />
+      <span className="font-medium text-base-content">
+        {t(`detail.days_short.${schedule.dayOfWeek}`)}
+      </span>
+      <span className="text-base-content/50">
+        {schedule.startTime} – {schedule.endTime}
+      </span>
+    </div>
+  );
+};
 
-// ─── Tab button ───────────────────────────────────────────────────────────────
 const Tab = ({ active, onClick, children }) => (
   <button
     onClick={onClick}
@@ -140,10 +139,10 @@ const Tab = ({ active, onClick, children }) => (
   </button>
 );
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function TutorDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation("tutors");
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -155,8 +154,9 @@ export default function TutorDetailPage() {
       try {
         const res = await API.get(`/tutors/${id}`);
         setProfile(res.data?.data?.profile);
+        setError("");
       } catch (err) {
-        setError(err.message || "Không tìm thấy gia sư");
+        setError(err.response?.data?.message || err.message || "");
       } finally {
         setLoading(false);
       }
@@ -164,7 +164,6 @@ export default function TutorDetailPage() {
     if (id) fetchProfile();
   }, [id]);
 
-  // ── Loading ──
   if (loading) {
     return (
       <div className="min-h-screen bg-base-200 flex items-center justify-center">
@@ -173,39 +172,56 @@ export default function TutorDetailPage() {
     );
   }
 
-  // ── Error ──
   if (error || !profile) {
     return (
       <div className="min-h-screen bg-base-200 flex flex-col items-center justify-center gap-4">
         <p className="text-error text-lg font-medium">
-          {error || "Không tìm thấy gia sư"}
+          {error || t("detail.not_found")}
         </p>
         <button className="btn btn-primary btn-sm" onClick={() => navigate(-1)}>
-          <FaArrowLeft size={12} /> Quay lại
+          <FaArrowLeft size={12} /> {t("detail.back")}
         </button>
       </div>
     );
   }
 
   const { user, educations, socialMedia, schedules, reviews } = profile;
-
-  // ── Derived values ──
   const avgRating = profile.rating ?? 0;
   const totalReviews = profile.totalReviews ?? 0;
+
+  const experienceYears =
+    profile.experience != null
+      ? `${profile.experience} ${
+          profile.experience === 1 ? t("detail.year") : t("detail.years")
+        }`
+      : null;
+
+  const tuitionHours =
+    profile.tuitionDuration != null
+      ? `${profile.tuitionDuration} ${t("detail.hours")}`
+      : null;
+
+  const timingKey = profile.timingShift
+    ? TIMING_KEYS[profile.timingShift]
+    : null;
+  const timingLabel = timingKey ? t(timingKey) : null;
+
+  const styleKey = profile.tutoringStyle
+    ? STYLE_KEYS[profile.tutoringStyle]
+    : null;
+  const styleLabel = styleKey ? t(styleKey) : null;
+
   const openModal = () => {
     document.getElementById("modal_request_tutor").showModal();
   };
 
   return (
     <div className="min-h-screen bg-base-200">
-      {/* ── Hero banner ── */}
       <div className="h-32 bg-primary/20 relative" />
 
-      {/* ── Profile header ── */}
       <div className="bg-base-100 shadow-sm">
         <div className="max-w-5xl mx-auto px-6 pb-6">
           <div className="flex items-end gap-5 -mt-14 mb-4">
-            {/* Avatar */}
             <div className="relative shrink-0">
               <img
                 src={
@@ -222,7 +238,6 @@ export default function TutorDetailPage() {
               )}
             </div>
 
-            {/* Name + meta */}
             <div className="flex-1 min-w-0 pt-16">
               <div className="flex items-start justify-between flex-wrap gap-3">
                 <div>
@@ -231,8 +246,8 @@ export default function TutorDetailPage() {
                   </h1>
                   <p className="text-primary text-sm font-medium mt-0.5">
                     {profile.subjects?.[0]
-                      ? `${profile.subjects[0]} Tutor`
-                      : "Tutor"}
+                      ? t("card.tutor_of", { subject: profile.subjects[0] })
+                      : t("card.tutor")}
                   </p>
 
                   <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-base-content/50">
@@ -255,7 +270,6 @@ export default function TutorDetailPage() {
                   </div>
                 </div>
 
-                {/* Social icons */}
                 <div className="flex items-center gap-2">
                   {socialMedia?.facebook && (
                     <a
@@ -290,54 +304,51 @@ export default function TutorDetailPage() {
                 </div>
               </div>
 
-              {/* CTA buttons */}
               <div className="flex gap-2 mt-4 flex-wrap">
                 {profile.phone && (
                   <a
                     href={`tel:${profile.phone}`}
                     className="btn btn-sm btn-outline btn-primary gap-1.5"
                   >
-                    <FaPhone size={11} /> Call Me
+                    <FaPhone size={11} /> {t("detail.call_me")}
                   </a>
                 )}
-                <button className="btn btn-sm btn-primary gap-1.5" onClick={() => openModal()}>
-                  <FaUserPlus size={11} /> Hire Me
+                <button
+                  className="btn btn-sm btn-primary gap-1.5"
+                  onClick={openModal}
+                >
+                  <FaUserPlus size={11} /> {t("detail.hire_me")}
                 </button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* ── Tabs ── */}
         <div className="max-w-5xl mx-auto px-6">
           <div className="flex gap-6 border-b border-base-200">
             <Tab active={tab === "tuition"} onClick={() => setTab("tuition")}>
-              Tuition Info
+              {t("detail.tab_tuition")}
             </Tab>
             <Tab active={tab === "basic"} onClick={() => setTab("basic")}>
-              Basic Information
+              {t("detail.tab_basic")}
             </Tab>
             {reviews?.length > 0 && (
               <Tab active={tab === "reviews"} onClick={() => setTab("reviews")}>
-                Reviews ({totalReviews})
+                {t("detail.tab_reviews", { count: totalReviews })}
               </Tab>
             )}
           </div>
         </div>
       </div>
 
-      {/* ── Body ── */}
       <div className="max-w-5xl mx-auto px-6 py-8">
         <div className="flex gap-6 items-start">
-          {/* ── Left column ── */}
           <div className="flex-1 min-w-0 space-y-6">
-            {/* TUITION INFO tab */}
             {tab === "tuition" && (
               <>
-                {/* Tuition details */}
                 <div className="bg-base-100 rounded-2xl shadow-sm border border-base-200 p-6">
                   <InfoRow
-                    label="Expected Salary (Per Hour)"
+                    label={t("detail.salary_per_hour")}
                     value={
                       profile.pricePerHour != null
                         ? `$${Number(profile.pricePerHour).toFixed(2)} USD`
@@ -345,13 +356,13 @@ export default function TutorDetailPage() {
                     }
                   />
                   <InfoRow
-                    label="Days Per Week"
+                    label={t("detail.days_per_week")}
                     value={
                       profile.daysPerWeek != null ? profile.daysPerWeek : null
                     }
                   />
                   <InfoRow
-                    label="Preferred Medium"
+                    label={t("detail.preferred_medium")}
                     value={
                       profile.languages?.length
                         ? profile.languages.join(" ,  ")
@@ -359,39 +370,23 @@ export default function TutorDetailPage() {
                     }
                   />
                   <InfoRow
-                    label="Timing Shift"
-                    value={
-                      profile.timingShift
-                        ? TIMING_LABEL[profile.timingShift]
-                        : null
-                    }
+                    label={t("detail.timing_shift")}
+                    value={timingLabel}
                   />
                   <InfoRow
-                    label="Preferred Tutoring Style"
-                    value={
-                      profile.tutoringStyle
-                        ? STYLE_LABEL[profile.tutoringStyle]
-                        : null
-                    }
+                    label={t("detail.tutoring_style")}
+                    value={styleLabel}
                   />
                   <InfoRow
-                    label="Tuition Experience"
-                    value={
-                      profile.experience != null
-                        ? `${profile.experience} Year`
-                        : null
-                    }
+                    label={t("detail.experience")}
+                    value={experienceYears}
                   />
                   <InfoRow
-                    label="Tuition Duration"
-                    value={
-                      profile.tuitionDuration != null
-                        ? `${profile.tuitionDuration} Hours`
-                        : null
-                    }
+                    label={t("detail.duration")}
+                    value={tuitionHours}
                   />
                   <InfoRow
-                    label="Preferred Area For Tuition"
+                    label={t("detail.preferred_area")}
                     value={
                       profile.preferredAreas?.length
                         ? profile.preferredAreas.join(" ,  ")
@@ -400,15 +395,14 @@ export default function TutorDetailPage() {
                   />
                 </div>
 
-                {/* Background / Subjects */}
                 {profile.subjects?.length > 0 && (
                   <div className="bg-base-100 rounded-2xl shadow-sm border border-base-200 p-6">
                     <h2 className="text-base font-bold text-base-content mb-4">
-                      Background
+                      {t("detail.background")}
                     </h2>
                     <div className="flex items-start gap-4">
                       <span className="text-base-content/50 text-sm w-40 shrink-0 pt-0.5">
-                        Expertise
+                        {t("detail.expertise")}
                       </span>
                       <div className="flex flex-wrap gap-2">
                         {profile.subjects.map((s) => (
@@ -424,11 +418,10 @@ export default function TutorDetailPage() {
                   </div>
                 )}
 
-                {/* Education */}
                 {educations?.length > 0 && (
                   <div className="bg-base-100 rounded-2xl shadow-sm border border-base-200 p-6">
                     <h2 className="text-base font-bold text-base-content mb-4">
-                      Education
+                      {t("detail.education")}
                     </h2>
                     <div className="space-y-3">
                       {educations.map((edu) => (
@@ -438,12 +431,11 @@ export default function TutorDetailPage() {
                   </div>
                 )}
 
-                {/* Reviews preview */}
                 {reviews?.length > 0 && (
                   <div className="bg-base-100 rounded-2xl shadow-sm border border-base-200 p-6">
                     <div className="flex items-center justify-between mb-4">
                       <h2 className="text-base font-bold text-base-content">
-                        Recent Reviews
+                        {t("detail.recent_reviews")}
                       </h2>
                       <div className="flex items-center gap-1.5">
                         <FaStar className="text-warning" size={14} />
@@ -465,7 +457,7 @@ export default function TutorDetailPage() {
                         className="btn btn-ghost btn-sm mt-3 text-primary"
                         onClick={() => setTab("reviews")}
                       >
-                        View all {totalReviews} reviews →
+                        {t("detail.view_all_reviews", { count: totalReviews })}
                       </button>
                     )}
                   </div>
@@ -473,21 +465,22 @@ export default function TutorDetailPage() {
               </>
             )}
 
-            {/* BASIC INFO tab */}
             {tab === "basic" && (
               <div className="bg-base-100 rounded-2xl shadow-sm border border-base-200 p-6">
                 <h2 className="text-base font-bold text-base-content mb-4">
-                  Basic Information
+                  {t("detail.tab_basic")}
                 </h2>
-                <InfoRow label="Full Name" value={user?.name} />
-                <InfoRow label="Email" value={user?.email} />
-                <InfoRow label="Phone" value={profile.phone} />
-                <InfoRow label="Address" value={profile.address} />
-                <InfoRow label="Country" value={profile.country} />
-                <InfoRow label="Gender" value={user?.gender} />
+                <InfoRow label={t("detail.full_name")} value={user?.name} />
+                <InfoRow label={t("detail.email")} value={user?.email} />
+                <InfoRow label={t("detail.phone")} value={profile.phone} />
+                <InfoRow label={t("detail.address")} value={profile.address} />
+                <InfoRow label={t("detail.country")} value={profile.country} />
+                <InfoRow label={t("detail.gender")} value={user?.gender} />
                 {profile.bio && (
                   <div className="py-3">
-                    <p className="text-base-content/50 text-sm mb-1">Bio</p>
+                    <p className="text-base-content/50 text-sm mb-1">
+                      {t("detail.bio")}
+                    </p>
                     <p className="text-base-content text-sm leading-relaxed">
                       {profile.bio}
                     </p>
@@ -495,22 +488,24 @@ export default function TutorDetailPage() {
                 )}
                 {profile.qualification && (
                   <InfoRow
-                    label="Qualification"
+                    label={t("detail.qualification")}
                     value={profile.qualification}
                   />
                 )}
                 {profile.certificate && (
-                  <InfoRow label="Certificate" value={profile.certificate} />
+                  <InfoRow
+                    label={t("detail.certificate")}
+                    value={profile.certificate}
+                  />
                 )}
               </div>
             )}
 
-            {/* REVIEWS tab */}
             {tab === "reviews" && (
               <div className="bg-base-100 rounded-2xl shadow-sm border border-base-200 p-6">
                 <div className="flex items-center gap-3 mb-6">
                   <h2 className="text-base font-bold text-base-content">
-                    All Reviews
+                    {t("detail.all_reviews")}
                   </h2>
                   <div className="flex items-center gap-1.5">
                     <FaStar className="text-warning" size={14} />
@@ -531,13 +526,11 @@ export default function TutorDetailPage() {
             )}
           </div>
 
-          {/* ── Right column ── */}
           <div className="w-72 shrink-0 space-y-4">
-            {/* Coverage Area */}
             {profile.preferredAreas?.length > 0 && (
               <div className="bg-base-100 rounded-2xl shadow-sm border border-base-200 p-5">
                 <h3 className="font-bold text-base-content text-sm mb-3">
-                  Coverage Area
+                  {t("detail.coverage_area")}
                 </h3>
                 <div className="flex gap-2 items-start">
                   <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
@@ -550,14 +543,13 @@ export default function TutorDetailPage() {
               </div>
             )}
 
-            {/* Schedule */}
             {schedules?.length > 0 && (
               <div className="bg-base-100 rounded-2xl shadow-sm border border-base-200 p-5">
                 <h3 className="font-bold text-base-content text-sm mb-1">
-                  Available Schedule
+                  {t("detail.available_schedule")}
                 </h3>
                 <p className="text-xs text-base-content/40 mb-3">
-                  Weekly availability
+                  {t("detail.weekly_availability")}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {schedules.map((s) => (
@@ -567,10 +559,9 @@ export default function TutorDetailPage() {
               </div>
             )}
 
-            {/* Quick Stats */}
             <div className="bg-base-100 rounded-2xl shadow-sm border border-base-200 p-5">
               <h3 className="font-bold text-base-content text-sm mb-3">
-                Quick Stats
+                {t("detail.quick_stats")}
               </h3>
               <div className="space-y-3">
                 {profile.pricePerHour != null && (
@@ -579,7 +570,9 @@ export default function TutorDetailPage() {
                       <FaDollarSign className="text-success" size={13} />
                     </div>
                     <div>
-                      <p className="text-xs text-base-content/50">Per Hour</p>
+                      <p className="text-xs text-base-content/50">
+                        {t("detail.per_hour")}
+                      </p>
                       <p className="font-semibold text-sm text-base-content">
                         ${Number(profile.pricePerHour).toFixed(2)} USD
                       </p>
@@ -592,10 +585,14 @@ export default function TutorDetailPage() {
                       <FaChalkboardTeacher className="text-primary" size={13} />
                     </div>
                     <div>
-                      <p className="text-xs text-base-content/50">Experience</p>
+                      <p className="text-xs text-base-content/50">
+                        {t("detail.experience")}
+                      </p>
                       <p className="font-semibold text-sm text-base-content">
-                        {profile.experience} Year
-                        {profile.experience > 1 ? "s" : ""}
+                        {profile.experience}{" "}
+                        {profile.experience === 1
+                          ? t("detail.year")
+                          : t("detail.years")}
                       </p>
                     </div>
                   </div>
@@ -606,7 +603,9 @@ export default function TutorDetailPage() {
                       <FaGlobe className="text-info" size={13} />
                     </div>
                     <div>
-                      <p className="text-xs text-base-content/50">Languages</p>
+                      <p className="text-xs text-base-content/50">
+                        {t("detail.languages")}
+                      </p>
                       <p className="font-semibold text-sm text-base-content">
                         {profile.languages.join(", ")}
                       </p>
@@ -620,10 +619,10 @@ export default function TutorDetailPage() {
                     </div>
                     <div>
                       <p className="text-xs text-base-content/50">
-                        Days / Week
+                        {t("detail.days_week")}
                       </p>
                       <p className="font-semibold text-sm text-base-content">
-                        {profile.daysPerWeek} Days
+                        {profile.daysPerWeek} {t("detail.days")}
                       </p>
                     </div>
                   </div>
@@ -635,11 +634,13 @@ export default function TutorDetailPage() {
                     </div>
                     <div>
                       <p className="text-xs text-base-content/50">
-                        Session Duration
+                        {t("detail.session_duration")}
                       </p>
                       <p className="font-semibold text-sm text-base-content">
-                        {profile.tuitionDuration} Hour
-                        {profile.tuitionDuration > 1 ? "s" : ""}
+                        {profile.tuitionDuration}{" "}
+                        {profile.tuitionDuration === 1
+                          ? t("detail.hour")
+                          : t("detail.hours")}
                       </p>
                     </div>
                   </div>
@@ -647,20 +648,28 @@ export default function TutorDetailPage() {
               </div>
             </div>
 
-            {/* Hire CTA */}
             <div className="bg-primary rounded-2xl p-5 text-primary-content">
-              <p className="font-bold text-sm mb-1">Ready to learn?</p>
+              <p className="font-bold text-sm mb-1">{t("detail.ready_title")}</p>
               <p className="text-xs opacity-80 mb-4">
-                Book a session with {user?.name?.split(" ")[0]} today
+                {t("detail.ready_desc", {
+                  name: user?.name?.split(" ")[0] || user?.name,
+                })}
               </p>
-              <button className="btn btn-sm bg-primary-content text-primary hover:bg-primary-content/90 w-full font-semibold">
-                <FaUserPlus size={12} /> Hire Me
+              <button
+                className="btn btn-sm bg-primary-content text-primary hover:bg-primary-content/90 w-full font-semibold"
+                onClick={openModal}
+              >
+                <FaUserPlus size={12} /> {t("detail.hire_me")}
               </button>
             </div>
           </div>
         </div>
       </div>
-      <FormRequestTutor />
+      <FormRequestTutor
+        tutorProfileId={profile.id}
+        tutorName={user?.name}
+        defaultSubject={profile.subjects?.[0] || ""}
+      />
     </div>
   );
 }

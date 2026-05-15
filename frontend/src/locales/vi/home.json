@@ -46,6 +46,8 @@
     "role_student":"Học viên",
     "btn_register1":"Bạn chưa có tài khoản? Đăng ký",
     "btn_login1":"Bạn đã có tài khoản? Đăng nhập",
-    "dashboard":"Trang chủ"
+    "dashboard":"Trang chủ",
+    "dashboard_tutor":"Gia sư",
+    "dashboard_booking":"Đặt lịch"
   }
 }

@@ -1,0 +1,15 @@
+{
+  "nav": {
+    "hello": "Xin chào, {{name}}",
+    "english": "English",
+    "vietnamese": "Tiếng Việt",
+    "parent": "Danh mục",
+    "submenu1": "Mục con 1",
+    "tutors_link": "Gia sư"
+  },
+  "modal_login": {
+    "title_login": "Đăng nhập",
+    "title_signup": "Đăng ký",
+    "copyright": "Bản quyền © {{brand}} 2026."
+  }
+}

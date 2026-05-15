@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 
 const ModalLogin = ({ mode, onSwitchMode }) => {
   const { login, register, user } = useAuth();
-  const { t } = useTranslation();
+  const { t } = useTranslation(["home", "common", "toast"]);
   const [rememberMe, setRememberMe] = useState(false);
   const [form, setForm] = useState({
     name: "",
@@ -38,7 +38,7 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
     e.preventDefault();
 
     if (mode === "signup" && form.password !== form.confirmPassword) {
-      toast.error("Mật khẩu xác nhận không khớp");
+      toast.error(t("toast:password_mismatch"));
       return;
     }
 
@@ -48,9 +48,9 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
         await toast.promise(
           login({ email: form.email, password: form.password }, rememberMe),
           {
-            loading: "Đang đăng nhập...",
+            loading: t("toast:logging_in"),
             success: null,
-            error: (err) => err.response?.data?.message || "Đăng nhập thất bại",
+            error: (err) => err.response?.data?.message || t("toast:login_failed"),
           },
         );
       } else {
@@ -62,9 +62,9 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
             role: form.role,
           }),
           {
-            loading: "Đang tạo tài khoản...",
+            loading: t("toast:creating_account"),
             success: null,
-            error: (err) => err.response?.data?.message || "Đăng ký thất bại",
+            error: (err) => err.response?.data?.message || t("toast:register_failed"),
           },
         );
       }
@@ -76,7 +76,6 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
 
   return (
     <dialog id="modal_login" className="modal">
-      <Toaster position="top-right" />
       <div className="modal-box max-w-3xl p-0 overflow-hidden">
         <div className="flex min-h-115">
           {/* Cột trái - Form */}
@@ -90,7 +89,7 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
             </div>
 
             <h2 className="text-2xl font-bold mb-6">
-              {mode === "login" ? "Log in" : "Sign Up"}
+              {mode === "login" ? t("common:modal_login.title_login") : t("common:modal_login.title_signup")}
             </h2>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -222,8 +221,7 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
           <div className="flex-1 bg-blue-50 hidden md:flex flex-col items-center justify-center p-8">
             <img src={logo} alt="illustration" className="w-64" />
             <p className="text-sm text-gray-500 mt-4 text-center">
-              Copyright © <span className="text-blue-600">TutorConnect</span>{" "}
-              2026.
+              {t("common:modal_login.copyright", { brand: "TutorConnect" })}
             </p>
           </div>
         </div>

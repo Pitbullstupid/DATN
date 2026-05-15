@@ -1,0 +1,15 @@
+{
+  "nav": {
+    "hello": "Hello, {{name}}",
+    "english": "English",
+    "vietnamese": "Tiếng Việt",
+    "parent": "Parent",
+    "submenu1": "Submenu 1",
+    "tutors_link": "Tutors"
+  },
+  "modal_login": {
+    "title_login": "Log in",
+    "title_signup": "Sign Up",
+    "copyright": "Copyright © {{brand}} 2026."
+  }
+}

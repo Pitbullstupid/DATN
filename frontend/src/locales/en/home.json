@@ -47,6 +47,8 @@
     "role_student":"Student",
     "btn_register1":"Don't have an account? Sign Up",
     "btn_login1":"Already have an account? Log in",
-    "dashboard":"Dashboard"
+    "dashboard":"Dashboard",
+    "dashboard_tutor":"Tutors",
+    "dashboard_booking":"Bookings"
   }
 }

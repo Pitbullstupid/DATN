@@ -4,6 +4,7 @@ import { connectDB, disconnectDB } from "./config/db.js";
 // Import routes
 import tutorRoutes from "./routes/tutorRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
+import bookingRoutes from "./routes/bookingRoutes.js";
 
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -26,6 +27,8 @@ const PORT = 5001;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use("/api/bookings", bookingRoutes);
+
 
 //API routes
 app.use("/api/tutors", tutorRoutes);

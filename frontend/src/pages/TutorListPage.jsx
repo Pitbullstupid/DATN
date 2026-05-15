@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import {
   FaFacebookF,
@@ -12,6 +12,7 @@ import {
   FaFilter,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 // ─── Axios instance ───────────────────────────────────────────────────────────
 const API = axios.create({
@@ -24,56 +25,17 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-const EXPERIENCE_OPTIONS = [
-  { label: "All", value: "" },
-  { label: "0.5 Years", value: "0.5" },
-  { label: "1 Years", value: "1" },
-  { label: "2 Years", value: "2" },
-  { label: "3 Years", value: "3" },
-  { label: "4 Years", value: "4" },
-  { label: "5 Years", value: "5" },
-  { label: "6 Years", value: "6" },
-  { label: "7 Years", value: "7" },
-  { label: "10+ Years", value: "10" },
-];
-
-const DAY_OPTIONS = [
-  { label: "All", value: "" },
-  { label: "1 Days/Week", value: "1" },
-  { label: "2 Days/Week", value: "2" },
-  { label: "3 Days/Week", value: "3" },
-  { label: "4 Days/Week", value: "4" },
-  { label: "5 Days/Week", value: "5" },
-  { label: "6 Days/Week", value: "6" },
-];
-
-const SUBJECT_OPTIONS = [
-  { label: "All Subject", value: "" },
-  { label: "Math", value: "Math" },
-  { label: "Physics", value: "Physics" },
-  { label: "Chemistry", value: "Chemistry" },
-  { label: "Biology", value: "Biology" },
-  { label: "English", value: "English" },
-  { label: "History", value: "History" },
-  { label: "Data Communication", value: "Data Communication" },
-  { label: "Microprocessor", value: "Microprocessor" },
-  { label: "Software Development", value: "Software Development" },
-];
-
-const TIME_OPTIONS = [
-  { label: "All Time", value: "" },
-  { label: "Morning", value: "MORNING" },
-  { label: "Afternoon", value: "AFTERNOON" },
-  { label: "Evening", value: "EVENING" },
-  { label: "Flexible", value: "FLEXIBLE" },
-];
-
-const SORT_OPTIONS = [
-  { label: "All", value: "all" },
-  { label: "Price: Low to High", value: "price_asc" },
-  { label: "Price: High to Low", value: "price_desc" },
-  { label: "Top Rated", value: "rating" },
+const SUBJECT_VALUES = [
+  "",
+  "Math",
+  "Physics",
+  "Chemistry",
+  "Biology",
+  "English",
+  "History",
+  "Data Communication",
+  "Microprocessor",
+  "Software Development",
 ];
 
 // ─── Social bar overlay ───────────────────────────────────────────────────────
@@ -117,6 +79,7 @@ const SocialBar = ({ social }) => (
 
 // ─── Tutor Card ───────────────────────────────────────────────────────────────
 const TutorCard = ({ tutor }) => {
+  const { t } = useTranslation("tutors");
   const navigate = useNavigate();
   const {
     user,
@@ -133,7 +96,6 @@ const TutorCard = ({ tutor }) => {
       className="relative bg-base-100 rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 group border border-base-200"
       onClick={() => navigate(`/tutors/${tutor.id}`)}
     >
-      {/* Photo */}
       <div className="relative h-52 bg-base-200 overflow-hidden">
         <img
           src={
@@ -146,13 +108,11 @@ const TutorCard = ({ tutor }) => {
         <SocialBar social={socialMedia} />
       </div>
 
-      {/* Info */}
       <div className="p-4">
         <h3 className="font-bold text-primary text-base text-center leading-tight">
           {user?.name || "—"}
         </h3>
 
-        {/* Divider with dot */}
         <div className="flex items-center justify-center gap-1 my-1.5">
           <div className="h-px w-10 bg-primary opacity-40" />
           <div className="w-2 h-2 rounded-full bg-primary" />
@@ -160,15 +120,17 @@ const TutorCard = ({ tutor }) => {
         </div>
 
         <p className="text-base-content/60 text-xs text-center mb-3">
-          {subjects?.[0] ? `${subjects[0]} Tutor` : "Tutor"}
+          {subjects?.[0]
+            ? t("card.tutor_of", { subject: subjects[0] })
+            : t("card.tutor")}
         </p>
 
-        {/* Stats row */}
         <div className="flex items-center justify-between text-xs text-base-content/70 border-t border-base-200 pt-3">
           <span className="flex items-center gap-1.5">
             <FaCalendarAlt className="text-primary" />
-            {/* daysPerWeek có thể null nếu gia sư chưa điền step2 */}
-            {daysPerWeek != null ? `${daysPerWeek} Day/Week` : "Flexible"}
+            {daysPerWeek != null
+              ? t("card.day_per_week", { count: daysPerWeek })
+              : t("card.flexible")}
           </span>
           <span className="flex items-center gap-1 font-semibold text-base-content">
             <FaDollarSign className="text-success" />
@@ -178,7 +140,6 @@ const TutorCard = ({ tutor }) => {
           </span>
         </div>
 
-        {/* Stars */}
         <div className="flex items-center gap-1 mt-2 justify-center">
           {Array.from({ length: 5 }).map((_, i) => (
             <FaStar
@@ -192,7 +153,7 @@ const TutorCard = ({ tutor }) => {
           <span className="text-xs text-base-content/40 ml-1">
             {(rating ?? 0) > 0
               ? `${Number(rating).toFixed(1)} (${totalReviews ?? 0})`
-              : "No reviews"}
+              : t("card.no_reviews")}
           </span>
         </div>
       </div>
@@ -238,6 +199,7 @@ const CheckboxGroup = ({ label, options, selected, onChange }) => (
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function TutorListPage() {
+  const { t } = useTranslation("tutors");
   const [tutors, setTutors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({
@@ -246,7 +208,6 @@ export default function TutorListPage() {
     page: 1,
   });
 
-  // Filters
   const [search, setSearch] = useState("");
   const [subject, setSubject] = useState("");
   const [timingShift, setTimingShift] = useState("");
@@ -255,6 +216,60 @@ export default function TutorListPage() {
   const [priceRange, setPriceRange] = useState(2000);
   const [sortBy, setSortBy] = useState("all");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  const experienceOptions = useMemo(
+    () => [
+      { label: t("filters.all"), value: "" },
+      { label: t("filters.experience_half"), value: "0.5" },
+      ...[1, 2, 3, 4, 5, 6, 7].map((y) => ({
+        label: t("filters.experience_years", { value: y }),
+        value: String(y),
+      })),
+      { label: t("filters.experience_10plus"), value: "10" },
+    ],
+    [t],
+  );
+
+  const dayOptions = useMemo(
+    () => [
+      { label: t("filters.all"), value: "" },
+      ...[1, 2, 3, 4, 5, 6].map((d) => ({
+        label: t("filters.days_per_week", { count: d }),
+        value: String(d),
+      })),
+    ],
+    [t],
+  );
+
+  const subjectOptions = useMemo(
+    () =>
+      SUBJECT_VALUES.map((value) => ({
+        value,
+        label: value ? value : t("filters.all_subject"),
+      })),
+    [t],
+  );
+
+  const timeOptions = useMemo(
+    () => [
+      { label: t("filters.all_time"), value: "" },
+      { label: t("filters.morning"), value: "MORNING" },
+      { label: t("filters.afternoon"), value: "AFTERNOON" },
+      { label: t("filters.evening"), value: "EVENING" },
+      { label: t("filters.flexible"), value: "FLEXIBLE" },
+    ],
+    [t],
+  );
+
+  const sortOptions = useMemo(
+    () => [
+      { label: t("filters.all"), value: "all" },
+      { label: t("filters.sort_price_asc"), value: "price_asc" },
+      { label: t("filters.sort_price_desc"), value: "price_desc" },
+      { label: t("filters.sort_rating"), value: "rating" },
+    ],
+    [t],
+  );
 
   const fetchTutors = useCallback(async () => {
     setLoading(true);
@@ -270,29 +285,28 @@ export default function TutorListPage() {
       const res = await API.get("/tutors", { params });
       let data = res.data?.data?.tutors || [];
 
-      // ── Client-side filters ──
-
       if (search.trim()) {
         const q = search.toLowerCase();
         data = data.filter(
-          (t) =>
-            t.user?.name?.toLowerCase().includes(q) ||
-            t.subjects?.some((s) => s.toLowerCase().includes(q)),
+          (item) =>
+            item.user?.name?.toLowerCase().includes(q) ||
+            item.subjects?.some((s) => s.toLowerCase().includes(q)),
         );
       }
 
       if (experience) {
-        data = data.filter((t) =>
+        data = data.filter((item) =>
           experience === "10"
-            ? (t.experience ?? 0) >= 10
-            : t.experience === parseFloat(experience),
+            ? (item.experience ?? 0) >= 10
+            : item.experience === parseFloat(experience),
         );
       }
 
-      // daysPerWeek: so sánh số nguyên, bỏ qua record có daysPerWeek = null
       if (daysFilter) {
         const d = parseInt(daysFilter, 10);
-        data = data.filter((t) => t.daysPerWeek != null && t.daysPerWeek === d);
+        data = data.filter(
+          (item) => item.daysPerWeek != null && item.daysPerWeek === d,
+        );
       }
 
       if (sortBy === "price_asc")
@@ -337,19 +351,19 @@ export default function TutorListPage() {
     pagination.page,
   ]);
 
-  // Debounce search
   useEffect(() => {
-    const t = setTimeout(() => fetchTutors(), 400);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => fetchTutors(), 400);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
   const handlePageChange = (page) => setPagination((p) => ({ ...p, page }));
 
+  const tutorCount = pagination.total ?? tutors.length;
+
   return (
     <div className="min-h-screen bg-base-200">
       <div className="max-w-325 mx-auto px-4 py-8 flex gap-6">
-        {/* ── Sidebar ── */}
         <aside
           className={`shrink-0 transition-all duration-300 overflow-hidden ${
             sidebarOpen
@@ -358,7 +372,6 @@ export default function TutorListPage() {
           }`}
         >
           <div className="bg-base-100 rounded-2xl shadow p-4 sticky top-6 border border-base-200 w-52">
-            {/* Search */}
             <div className="relative mb-4">
               <FaSearch
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40 z-10"
@@ -366,59 +379,54 @@ export default function TutorListPage() {
               />
               <input
                 type="text"
-                placeholder="search here.."
+                placeholder={t("filters.search_placeholder")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="input input-sm input-bordered w-full pl-8 text-sm"
               />
             </div>
 
-            {/* Subject */}
             <select
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               className="select select-sm select-bordered w-full text-sm mb-3"
             >
-              {SUBJECT_OPTIONS.map((s) => (
+              {subjectOptions.map((s) => (
                 <option key={s.value} value={s.value}>
                   {s.label}
                 </option>
               ))}
             </select>
 
-            {/* Timing shift */}
             <select
               value={timingShift}
               onChange={(e) => setTimingShift(e.target.value)}
               className="select select-sm select-bordered w-full text-sm mb-5"
             >
-              {TIME_OPTIONS.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
+              {timeOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
                 </option>
               ))}
             </select>
 
-            {/* Experience */}
             <CheckboxGroup
-              label="Experiences"
-              options={EXPERIENCE_OPTIONS}
+              label={t("filters.experiences")}
+              options={experienceOptions}
               selected={experience}
               onChange={setExperience}
             />
 
-            {/* Days */}
             <CheckboxGroup
-              label="Days"
-              options={DAY_OPTIONS}
+              label={t("filters.days")}
+              options={dayOptions}
               selected={daysFilter}
               onChange={setDaysFilter}
             />
 
-            {/* Price range */}
             <div>
               <p className="text-primary font-semibold text-sm mb-2">
-                Filter by Price
+                {t("filters.filter_by_price")}
               </p>
               <input
                 type="range"
@@ -430,18 +438,13 @@ export default function TutorListPage() {
                 className="range range-xs range-primary w-full"
               />
               <p className="text-xs text-base-content/50 mt-1">
-                Price :{" "}
-                <span className="font-semibold text-primary">
-                  $0 – ${priceRange}
-                </span>
+                {t("filters.price_range", { max: priceRange })}
               </p>
             </div>
           </div>
         </aside>
 
-        {/* ── Main content ── */}
         <main className="flex-1 min-w-0">
-          {/* Top bar */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <button
@@ -449,25 +452,25 @@ export default function TutorListPage() {
                 className="btn btn-sm btn-outline btn-primary gap-2"
               >
                 <FaFilter size={11} />
-                Filter
+                {t("filters.filter")}
               </button>
               <span className="text-sm text-base-content/50">
                 {loading
-                  ? "Loading…"
-                  : `${pagination.total ?? tutors.length} tutors found`}
+                  ? t("filters.loading")
+                  : t("filters.tutors_found", { count: tutorCount })}
               </span>
             </div>
 
             <div className="flex items-center gap-2">
               <span className="text-sm text-base-content/60 font-medium">
-                Sort by
+                {t("filters.sort_by")}
               </span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 className="select select-sm select-bordered text-sm"
               >
-                {SORT_OPTIONS.map((s) => (
+                {sortOptions.map((s) => (
                   <option key={s.value} value={s.value}>
                     {s.label}
                   </option>
@@ -476,7 +479,6 @@ export default function TutorListPage() {
             </div>
           </div>
 
-          {/* Grid */}
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {Array.from({ length: 6 }).map((_, i) => (
@@ -486,8 +488,8 @@ export default function TutorListPage() {
           ) : tutors.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-base-content/40">
               <FaSearch size={40} className="mb-3 opacity-30" />
-              <p className="text-lg font-medium">No tutors found</p>
-              <p className="text-sm">Try adjusting your filters</p>
+              <p className="text-lg font-medium">{t("filters.no_tutors")}</p>
+              <p className="text-sm">{t("filters.try_filters")}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -497,7 +499,6 @@ export default function TutorListPage() {
             </div>
           )}
 
-          {/* Pagination */}
           {pagination.totalPages > 1 && (
             <div className="flex justify-center mt-8 gap-2 flex-wrap">
               <button

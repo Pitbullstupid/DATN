@@ -1,0 +1,50 @@
+{
+  "status": {
+    "all": "Tất cả",
+    "pending": "Chờ duyệt",
+    "accepted": "Đã chấp nhận",
+    "rejected": "Đã từ chối",
+    "cancelled": "Đã huỷ"
+  },
+  "student": {
+    "title": "Yêu cầu đặt lịch của tôi",
+    "subtitle": "Theo dõi và quản lý yêu cầu thuê gia sư",
+    "subject": "Môn học",
+    "sent": "Đã gửi",
+    "per_hour": "${{price}} / giờ",
+    "tutor_note": "Ghi chú gia sư:",
+    "cancel_request": "Huỷ yêu cầu",
+    "empty": "Không có yêu cầu nào",
+    "find_tutor": "Tìm gia sư",
+    "tutor_role": "Gia sư {{subject}}"
+  },
+  "tutor": {
+    "title": "Yêu cầu đến",
+    "subtitle": "Quản lý yêu cầu từ học viên",
+    "subject": "Môn học",
+    "received": "Nhận lúc",
+    "your_note": "Ghi chú của bạn:",
+    "reject": "Từ chối",
+    "accept": "Chấp nhận",
+    "session": "Buổi học:",
+    "min": "phút",
+    "empty_title": "Không có yêu cầu",
+    "empty_subtitle": "Học viên thuê bạn sẽ hiện ở đây"
+  },
+  "modal": {
+    "accept_title": "Chấp nhận yêu cầu",
+    "reject_title": "Từ chối yêu cầu",
+    "scheduled": "Ngày & giờ dạy",
+    "duration": "Thời lượng (phút)",
+    "minutes": "{{count}} phút",
+    "note_student": "Ghi chú cho học viên",
+    "optional": "(tuỳ chọn)",
+    "note_placeholder": "VD: Học qua Zoom, tôi sẽ gửi link...",
+    "reject_placeholder": "Cho học viên biết lý do từ chối...",
+    "reason": "Lý do",
+    "cancel": "Huỷ",
+    "back": "Quay lại",
+    "confirm_accept": "Xác nhận chấp nhận",
+    "confirm_reject": "Xác nhận từ chối"
+  }
+}

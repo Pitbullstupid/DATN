@@ -1,0 +1,56 @@
+{
+  "portal": "Trang gia sư",
+  "title": "Thông tin chung",
+  "load_error": "Không thể tải hồ sơ gia sư.",
+  "not_updated": "Chưa cập nhật",
+  "profile_status": {
+    "PENDING": "Chưa hoàn thiện",
+    "INCOMPLETE": "Đang hoàn thiện",
+    "REVIEWING": "Đang duyệt",
+    "APPROVED": "Đã duyệt",
+    "REJECTED": "Bị từ chối",
+    "SUSPENDED": "Tạm khoá"
+  },
+  "info": {
+    "join_date": "Ngày tham gia",
+    "email": "Email",
+    "mobile": "Điện thoại",
+    "address": "Địa chỉ"
+  },
+  "stats": {
+    "hiring_request": "Yêu cầu thuê",
+    "pending": "chờ xử lý",
+    "total_booking": "Tổng đặt lịch",
+    "all_time": "tất cả",
+    "accepted": "Đã chấp nhận",
+    "sessions": "buổi học",
+    "rating": "Đánh giá",
+    "reviews": "{{count}} đánh giá",
+    "total_payment": "Tổng thanh toán",
+    "usd": "USD",
+    "total_ticket": "Tổng vé",
+    "tickets": "vé"
+  },
+  "profile": {
+    "edit": "Sửa hồ sơ",
+    "incomplete_title": "Hồ sơ chưa hoàn thiện",
+    "incomplete_desc": "Hoàn thiện hồ sơ để được duyệt và nhận học viên.",
+    "complete_now": "Hoàn thiện ngay"
+  },
+  "table": {
+    "title": "Tin nhắn yêu cầu thuê",
+    "subtitle": "Học viên đã gửi yêu cầu thuê",
+    "pending_badge": "{{count}} chờ",
+    "view_all": "Xem tất cả →",
+    "no_pending": "Không có yêu cầu chờ",
+    "student": "Học viên",
+    "subject": "Môn",
+    "message": "Tin nhắn",
+    "status": "Trạng thái",
+    "action": "Thao tác",
+    "accept": "Chấp nhận",
+    "reject": "Từ chối",
+    "view_all_count": "Xem tất cả {{count}} yêu cầu →"
+  },
+  "default_name": "Gia sư"
+}

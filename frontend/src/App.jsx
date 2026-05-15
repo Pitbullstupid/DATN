@@ -1,25 +1,46 @@
-import Navbar from './components/Navbar.jsx'
-import { Routes, Route } from 'react-router-dom'
-import Homepage from './pages/Homepage.jsx'
-import TutorDashboard from './pages/TutorDashboard.jsx'
-import TutorProfileEdit from './pages/TutorProfileEdit.jsx'
-import TutorListPage from './pages/TutorListPage.jsx'
-import TutorDetailPage from './pages/TutorDetailPage.jsx'
+import Navbar from "./components/Navbar.jsx";
+import { Routes, Route } from "react-router-dom";
+import Homepage from "./pages/Homepage.jsx";
+import TutorDashboard from "./pages/TutorDashboard.jsx";
+import TutorProfileEdit from "./pages/TutorProfileEdit.jsx";
+import TutorListPage from "./pages/TutorListPage.jsx";
+import TutorDetailPage from "./pages/TutorDetailPage.jsx";
+import TutorBookingsPage from "./pages/TutorBookingsPage.jsx";
+import StudentBookingsPage from "./pages/StudentBookingsPage.jsx";
+import { useAuth } from "./context/AuthContext.jsx";
+import { Toaster } from "react-hot-toast";
 function App() {
+  const { user } = useAuth();
   return (
     <div className="min-h-screen bg-base-100">
       <Navbar />
-      <main className='max-w-screen mx-auto'>
+      <main className="max-w-screen mx-auto">
+        <Toaster
+          position="top-center"
+          toastOptions={{ style: { fontSize: "13px" } }}
+          z-index={9999}
+        />
+
         <Routes>
           <Route path="/" element={<Homepage />} />
-          <Route path="/tutor/dashboard"     element={<TutorDashboard />} />
+          <Route path="/tutor/dashboard" element={<TutorDashboard />} />
           <Route path="/tutor/profile/edit" element={<TutorProfileEdit />} />
           <Route path="/tutors" element={<TutorListPage />} />
           <Route path="/tutors/:id" element={<TutorDetailPage />} />
+          <Route
+            path="/tutor/bookings"
+            element={
+              user?.role === "TUTOR" ? (
+                <TutorBookingsPage />
+              ) : (
+                <StudentBookingsPage />
+              )
+            }
+          />
         </Routes>
       </main>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

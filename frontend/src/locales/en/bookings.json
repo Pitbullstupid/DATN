@@ -1,0 +1,50 @@
+{
+  "status": {
+    "all": "All",
+    "pending": "Pending",
+    "accepted": "Accepted",
+    "rejected": "Rejected",
+    "cancelled": "Cancelled"
+  },
+  "student": {
+    "title": "My Booking Requests",
+    "subtitle": "Track and manage your tutor hire requests",
+    "subject": "Subject",
+    "sent": "Sent",
+    "per_hour": "${{price}} / hour",
+    "tutor_note": "Tutor note:",
+    "cancel_request": "Cancel Request",
+    "empty": "No booking requests found",
+    "find_tutor": "Find a Tutor",
+    "tutor_role": "{{subject}} Tutor"
+  },
+  "tutor": {
+    "title": "Incoming Requests",
+    "subtitle": "Manage booking requests from students",
+    "subject": "Subject",
+    "received": "Received",
+    "your_note": "Your note:",
+    "reject": "Reject",
+    "accept": "Accept",
+    "session": "Session:",
+    "min": "min",
+    "empty_title": "No requests found",
+    "empty_subtitle": "Students who hire you will appear here"
+  },
+  "modal": {
+    "accept_title": "Accept Booking",
+    "reject_title": "Reject Booking",
+    "scheduled": "Scheduled Date & Time",
+    "duration": "Duration (minutes)",
+    "minutes": "{{count}} minutes",
+    "note_student": "Note to Student",
+    "optional": "(optional)",
+    "note_placeholder": "e.g. We'll meet via Zoom, I'll send the link...",
+    "reject_placeholder": "Let the student know why you're declining...",
+    "reason": "Reason",
+    "cancel": "Cancel",
+    "back": "Back",
+    "confirm_accept": "Confirm Accept",
+    "confirm_reject": "Confirm Reject"
+  }
+}

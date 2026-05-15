@@ -14,7 +14,7 @@ const Navbar = () => {
   const [modalMode, setModalMode] = useState("login");
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { i18n, t } = useTranslation();
+  const { i18n, t } = useTranslation(["home", "common"]);
   const openModal = (mode) => {
     setModalMode(mode);
     document.getElementById("modal_login").showModal();
@@ -55,9 +55,7 @@ const Navbar = () => {
             className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow"
           >
             <li>
-              <a onClick={() => navigate("/")}>
-                {t("login.dashboard")}
-              </a>
+              <a onClick={() => navigate("/")}>{t("login.dashboard")}</a>
             </li>
             <li>
               <a>Parent</a>
@@ -71,7 +69,12 @@ const Navbar = () => {
               </ul>
             </li>
             <li>
-              <a onClick={() => navigate("/tutors")}>Tutor</a>
+              <a onClick={() => navigate("/tutors")}>{t("common:nav.tutors_link")}</a>
+            </li>
+            <li>
+              <a onClick={() => navigate("/tutor/bookings")}>
+                {t("login.dashboard_booking")}
+              </a>
             </li>
           </ul>
         </div>
@@ -83,25 +86,28 @@ const Navbar = () => {
       <div className="navbar-center hidden lg:flex">
         <ul className="menu menu-horizontal px-1">
           <li>
-            <a onClick={() => navigate("/")}>
-              {t("login.dashboard")}
-            </a>
+            <a onClick={() => navigate("/")}>{t("login.dashboard")}</a>
           </li>
           <li>
             <details>
-              <summary>Parent</summary>
+              <summary>{t("common:nav.parent")}</summary>
               <ul className="p-2 bg-base-100 w-40 z-1">
                 <li>
-                  <a>Submenu 1</a>
+                  <a>{t("common:nav.submenu1")}</a>
                 </li>
                 <li>
-                  <a>Tutor</a>
+                  <a onClick={() => navigate("/tutors")}>{t("login.dashboard_tutor")}</a>
                 </li>
               </ul>
             </details>
           </li>
           <li>
-            <a onClick={() => navigate("/tutors")}>Tutor</a>
+            <a onClick={() => navigate("/tutors")}>{t("login.dashboard_tutor")}</a>
+          </li>
+          <li>
+            <a onClick={() => navigate("/tutor/bookings")}>
+              {t("login.dashboard_booking")}
+            </a>
           </li>
         </ul>
       </div>
@@ -117,7 +123,7 @@ const Navbar = () => {
           >
             <MdLanguage className="text-lg" />
             <span className="hidden sm:inline">
-              {language === "en" ? "English" : "Tiếng Việt"}
+              {language === "en" ? t("common:nav.english") : t("common:nav.vietnamese")}
             </span>
           </div>
           <ul
@@ -125,10 +131,10 @@ const Navbar = () => {
             className="dropdown-content menu bg-base-100 rounded-box z-1 w-35 p-2 shadow-sm"
           >
             <li>
-              <button onClick={() => changeLanguage("en")}>English</button>
+              <button onClick={() => changeLanguage("en")}>{t("common:nav.english")}</button>
             </li>
             <li>
-              <button onClick={() => changeLanguage("vi")}>Tiếng Việt</button>
+              <button onClick={() => changeLanguage("vi")}>{t("common:nav.vietnamese")}</button>
             </li>
           </ul>
         </div>
@@ -137,7 +143,7 @@ const Navbar = () => {
           // Đã đăng nhập → hiển thị avatar + dropdown
           <>
             <span className="text-sm font-bold truncate max-w-25 sm:max-w-40 md:max-w-50 lg:max-w-60">
-              Xin chào, {user?.name?.toUpperCase()}
+              {t("common:nav.hello", { name: user?.name?.toUpperCase() })}
             </span>
             <div className="dropdown dropdown-end">
               <div
