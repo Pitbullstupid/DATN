@@ -4,7 +4,7 @@ import {
   getMyBookingsAsStudent,
   getMyBookingsAsTutor,
   getBookingById,
-  acceptBooking,
+  // acceptBooking,
   rejectBooking,
   cancelBooking,
 } from "../controllers/bookingControllers.js";
@@ -48,7 +48,7 @@ router.patch("/:id/cancel", authMiddleware, isStudent, cancelBooking);
 router.get("/tutor", authMiddleware, isTutor, getMyBookingsAsTutor);
 
 // Chấp nhận booking → tự động tạo ClassSession
-router.patch("/:id/accept", authMiddleware, isTutor, acceptBooking);
+// router.patch("/:id/accept", authMiddleware, isTutor, acceptBooking);
 
 // Từ chối booking
 router.patch("/:id/reject", authMiddleware, isTutor, rejectBooking);

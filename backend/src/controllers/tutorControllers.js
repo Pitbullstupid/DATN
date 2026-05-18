@@ -17,7 +17,7 @@ const getOwnProfile = async (userId) => {
 // ─────────────────────────────────────────────────────────────
 export const getMyProfile = async (req, res) => {
   try {
-    const profile = await prisma.tutorProfile.findUnique({
+    let profile = await prisma.tutorProfile.findUnique({
       where: { userId: req.user.id },
       include: {
         user: { select: { id: true, name: true, email: true, avatar: true, gender: true } },
@@ -28,7 +28,15 @@ export const getMyProfile = async (req, res) => {
     });
 
     if (!profile) {
-      return res.status(404).json({ status: "error", message: "Không tìm thấy hồ sơ" });
+      profile = await prisma.tutorProfile.create({
+        data: { userId: req.user.id, status: "PENDING" },
+        include: {
+          user: { select: { id: true, name: true, email: true, avatar: true, gender: true } },
+          educations: true,
+          socialMedia: true,
+          schedules: true,
+        },
+      });
     }
 
     res.status(200).json({ status: "success", data: { profile } });

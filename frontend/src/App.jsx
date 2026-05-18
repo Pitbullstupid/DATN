@@ -9,6 +9,9 @@ import TutorBookingsPage from "./pages/TutorBookingsPage.jsx";
 import StudentBookingsPage from "./pages/StudentBookingsPage.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
 import { Toaster } from "react-hot-toast";
+
+import CourseListPage from "./pages/CourseListPage.jsx";
+import CourseDetailPage from "./pages/CourseDetailPage.jsx";
 function App() {
   const { user } = useAuth();
   return (
@@ -37,6 +40,8 @@ function App() {
               )
             }
           />
+          <Route path="/courses" element={<CourseListPage />} />
+          <Route path="/courses/:id" element={<CourseDetailPage />} />
         </Routes>
       </main>
     </div>

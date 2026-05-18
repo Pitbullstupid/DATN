@@ -19,18 +19,10 @@ enum Role {
   ADMIN
 }
 
-enum ClassStatus {
-  PENDING
-  CONFIRMED
-  ONGOING
-  COMPLETED
-  CANCELLED
-}
-
 enum TutorStatus {
-  PENDING     // vừa đăng ký, chưa điền profile
-  INCOMPLETE  // đã điền một phần profile
-  REVIEWING   // đã submit profile, chờ admin duyệt
+  PENDING
+  INCOMPLETE
+  REVIEWING
   APPROVED
   REJECTED
   SUSPENDED
@@ -50,10 +42,25 @@ enum TimingShift {
 }
 
 enum BookingStatus {
-  PENDING    // Student vừa gửi, chờ Tutor xem
-  ACCEPTED   // Tutor chấp nhận
-  REJECTED   // Tutor từ chối
-  CANCELLED  // Student tự huỷ
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+enum CourseStatus {
+  UPCOMING    // chưa bắt đầu
+  ONGOING     // đang diễn ra
+  COMPLETED   // đã kết thúc
+  CANCELLED   // đã huỷ
+}
+
+enum SessionStatus {
+  SCHEDULED   // chưa diễn ra
+  ONGOING     // đang diễn ra
+  COMPLETED   // đã xong
+  CANCELLED   // bị huỷ / nghỉ
+  ABSENT      // học sinh vắng
 }
 
 // ================== USER ==================
@@ -69,11 +76,11 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tutorProfile   TutorProfile?
-  studentClasses ClassSession[]  @relation("StudentClasses")
-  messages       Message[]
-  reviews        Review[]        @relation("StudentReviews")
-  bookingsSent   BookingRequest[] @relation("StudentBookings")
+  tutorProfile    TutorProfile?
+  messages        Message[]
+  reviews         Review[]          @relation("StudentReviews")
+  bookingsSent    BookingRequest[]  @relation("StudentBookings")
+  enrolledCourses CourseClass[]     @relation("StudentCourses")
 
   @@map("users")
 }
@@ -85,13 +92,11 @@ model TutorProfile {
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // ---------- Bước 1: Thông tin cá nhân ----------
   bio     String?
   phone   String?
   address String?
   country String?
 
-  // ---------- Bước 2: Thông tin dạy học ----------
   subjects        String[]
   preferredAreas  String[]
   daysPerWeek     Int?
@@ -102,31 +107,25 @@ model TutorProfile {
   tuitionDuration Int?
   languages       String[]
 
-  // ---------- Bước 3: Bằng cấp / Học vấn ----------
   qualification String?
   certificate   String?
 
-  // ---------- Social Media ----------
   socialMedia TutorSocialMedia?
+  educations  TutorEducation[]
 
-  // ---------- Education ----------
-  educations TutorEducation[]
-
-  // ---------- Trạng thái hồ sơ ----------
   status    TutorStatus @default(PENDING)
   adminNote String?
 
-  // ---------- Thống kê ----------
   rating       Float @default(0)
   totalReviews Int   @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  classes         ClassSession[]
   schedules       TutorSchedule[]
   reviews         Review[]
-  bookingRequests BookingRequest[]  // ← thêm
+  bookingRequests BookingRequest[]
+  courses         CourseClass[]
 
   @@map("tutor_profiles")
 }
@@ -172,71 +171,129 @@ model TutorSocialMedia {
 model BookingRequest {
   id             String        @id @default(uuid())
 
-  // Ai gửi
   studentId      String
   student        User          @relation("StudentBookings", fields: [studentId], references: [id], onDelete: Cascade)
 
-  // Gửi cho ai
   tutorProfileId String
   tutorProfile   TutorProfile  @relation(fields: [tutorProfileId], references: [id], onDelete: Cascade)
 
-  // Form Student điền
-  name           String        // có thể khác tên tài khoản
-  email          String        // có thể khác email tài khoản
+  name           String
+  email          String
   subject        String
   message        String
 
-  // Phản hồi của Tutor
+  // Thông tin khóa học student mong muốn
+  startDate      DateTime?     // ngày muốn bắt đầu
+  totalSessions  Int?          // số buổi mong muốn
+  preferredDays  String[]      // ["MON","WED","FRI"]
+  preferredTime  String?       // "08:00"
+
   status         BookingStatus @default(PENDING)
-  tutorNote      String?       // lý do accept / reject
+  tutorNote      String?
 
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  // Nếu Tutor ACCEPTED → tạo ClassSession từ booking này
-  classSession   ClassSession?
+  courseClass    CourseClass?  // khi ACCEPTED → tạo CourseClass
 
   @@map("booking_requests")
 }
 
-// ================== CLASS SESSION ==================
+// ================== COURSE CLASS ==================
+// Đại diện cho 1 khóa học / lớp học giữa tutor và student
 
-model ClassSession {
+model CourseClass {
   id             String       @id @default(uuid())
+
   studentId      String
-  student        User         @relation("StudentClasses", fields: [studentId], references: [id])
+  student        User         @relation("StudentCourses", fields: [studentId], references: [id])
+
   tutorProfileId String
   tutorProfile   TutorProfile @relation(fields: [tutorProfileId], references: [id])
 
-  // Liên kết ngược về booking đã tạo ra session này (nullable)
   bookingRequestId String?        @unique
   bookingRequest   BookingRequest? @relation(fields: [bookingRequestId], references: [id])
 
-  subject     String
-  status      ClassStatus @default(PENDING)
-  scheduledAt DateTime
-  durationMin Int         @default(60)
-  note        String?
+  // Thông tin khóa học
+  subject        String
+  startDate      DateTime        // ngày bắt đầu
+  endDate        DateTime        // ngày kết thúc (dự kiến)
+  totalSessions  Int             // tổng số buổi học
+  sessionsDone   Int     @default(0)  // đã học xong
+  durationMin    Int     @default(60) // độ dài mỗi buổi (phút)
+  pricePerSession Float?          // giá mỗi buổi
+  totalPrice     Float?           // tổng học phí
+  note           String?
+
+  status         CourseStatus @default(UPCOMING)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Thời khóa biểu của khóa (VD: T2+T4 08:00-09:00)
+  schedules      CourseSchedule[]
+
+  // Từng buổi học cụ thể
+  sessions       CourseSession[]
+
+  // Đánh giá sau khi kết thúc
+  review         Review?
+
+  // Tin nhắn trong lớp
+  messages       Message[]
+
+  @@map("course_classes")
+}
+
+// ================== COURSE SCHEDULE ==================
+// Thời khóa biểu lặp lại của 1 khóa học
+// VD: Thứ 2 và Thứ 4, 08:00 - 09:30
+
+model CourseSchedule {
+  id            String      @id @default(uuid())
+  courseClassId String
+  courseClass   CourseClass @relation(fields: [courseClassId], references: [id], onDelete: Cascade)
+
+  dayOfWeek     Int         // 0=CN, 1=T2, 2=T3, ..., 6=T7
+  startTime     String      // "08:00"
+  endTime       String      // "09:30"
+
+  createdAt DateTime @default(now())
+
+  @@map("course_schedules")
+}
+
+// ================== COURSE SESSION ==================
+// Từng buổi học cụ thể trong khóa
+
+model CourseSession {
+  id            String        @id @default(uuid())
+  courseClassId String
+  courseClass   CourseClass   @relation(fields: [courseClassId], references: [id], onDelete: Cascade)
+
+  sessionNumber Int           // buổi thứ mấy (1, 2, 3...)
+  scheduledAt   DateTime      // ngày giờ buổi học
+  durationMin   Int           @default(60)
+  status        SessionStatus @default(SCHEDULED)
+  note          String?       // ghi chú riêng buổi này (VD: nghỉ lễ, dời lịch)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  review   Review?
-  messages Message[]
-
-  @@map("class_sessions")
+  @@map("course_sessions")
 }
 
 // ================== REVIEW ==================
+// Student đánh giá sau khi CourseClass COMPLETED
 
 model Review {
-  id             String       @id @default(uuid())
-  classSessionId String       @unique
-  classSession   ClassSession @relation(fields: [classSessionId], references: [id])
-  studentId      String
-  student        User         @relation("StudentReviews", fields: [studentId], references: [id])
+  id            String      @id @default(uuid())
+  courseClassId String      @unique
+  courseClass   CourseClass @relation(fields: [courseClassId], references: [id])
+  studentId     String
+  student       User        @relation("StudentReviews", fields: [studentId], references: [id])
   tutorProfileId String
-  tutorProfile   TutorProfile @relation(fields: [tutorProfileId], references: [id])
+  tutorProfile  TutorProfile @relation(fields: [tutorProfileId], references: [id])
 
   rating    Int
   comment   String?
@@ -248,11 +305,11 @@ model Review {
 // ================== MESSAGE ==================
 
 model Message {
-  id             String       @id @default(uuid())
-  classSessionId String
-  classSession   ClassSession @relation(fields: [classSessionId], references: [id])
-  senderId       String
-  sender         User         @relation(fields: [senderId], references: [id])
+  id            String      @id @default(uuid())
+  courseClassId String
+  courseClass   CourseClass @relation(fields: [courseClassId], references: [id])
+  senderId      String
+  sender        User        @relation(fields: [senderId], references: [id])
 
   content   String
   createdAt DateTime @default(now())
@@ -261,15 +318,16 @@ model Message {
 }
 
 // ================== TUTOR SCHEDULE ==================
+// Lịch rảnh chung của gia sư (dùng để hiển thị profile)
 
 model TutorSchedule {
   id             String       @id @default(uuid())
   tutorProfileId String
   tutorProfile   TutorProfile @relation(fields: [tutorProfileId], references: [id], onDelete: Cascade)
 
-  dayOfWeek  Int      // 0 = CN, 1 = T2, ..., 6 = T7
-  startTime  String   // "08:00"
-  endTime    String   // "10:00"
+  dayOfWeek  Int
+  startTime  String
+  endTime    String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -32,11 +32,7 @@ const isTutor = (req, res, next) => {
   next();
 };
 
-// ── Public ───────────────────────────────────────────────────
-router.get("/", getAllTutors);
-router.get("/:id", getTutorById);
-
-// ── Tutor only (authMiddleware + isTutor) ────────────────────
+// ── Tutor only (đặt TRƯỚC /:id để không bị nuốt bởi param :id) ──
 router.get   ("/me/profile",          authMiddleware, isTutor, getMyProfile);
 router.patch ("/me/step1",            authMiddleware, isTutor, validate(step1Schema),       updateStep1);
 router.patch ("/me/step2",            authMiddleware, isTutor, validate(step2Schema),       updateStep2);
@@ -45,5 +41,9 @@ router.patch ("/me/social-media",     authMiddleware, isTutor, validate(socialMe
 router.post  ("/me/education",        authMiddleware, isTutor, validate(educationSchema),   updateEducation);
 router.delete("/me/education/:eduId", authMiddleware, isTutor, deleteEducation);
 router.post  ("/me/submit",           authMiddleware, isTutor, submitProfile);
+
+// ── Public ───────────────────────────────────────────────────
+router.get("/", getAllTutors);
+router.get("/:id", getTutorById);
 
 export default router;

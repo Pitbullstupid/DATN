@@ -89,6 +89,14 @@ const login = async (req, res) => {
     return res.status(400).json({ message: "Email hoặc mật khẩu không đúng" });
   }
 
+  // Tài khoản TUTOR cũ có thể chưa có hồ sơ — tạo bản ghi trống để API /me/* không 404
+  if (user.role === "TUTOR" && !user.tutorProfile) {
+    await prisma.tutorProfile.create({
+      data: { userId: user.id, status: "PENDING" },
+    });
+    user.tutorProfile = { status: "PENDING" };
+  }
+
   // Xác định redirect khi login dựa trên trạng thái profile gia sư
   let redirect = "/";
   if (user.role === "TUTOR") {
