@@ -15,6 +15,9 @@
     "total": "Total Transactions",
     "subject": "Total Subjects"
   },
+  "gallery": {
+    "title": "Highlights"
+  },
   "categories":{
     "title": "Browse Course by Categories",
     "description": "Browse through some of our specialized courses",

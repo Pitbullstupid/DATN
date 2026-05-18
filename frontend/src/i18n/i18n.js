@@ -14,6 +14,8 @@ import DASHBOARD_EN from "../locales/en/dashboard.json";
 import DASHBOARD_VI from "../locales/vi/dashboard.json";
 import PROFILE_EN from "../locales/en/profile.json";
 import PROFILE_VI from "../locales/vi/profile.json";
+import COURSES_EN from "../locales/en/courses.json";
+import COURSES_VI from "../locales/vi/courses.json";
 
 const resources = {
   en: {
@@ -24,6 +26,7 @@ const resources = {
     bookings: BOOKINGS_EN,
     dashboard: DASHBOARD_EN,
     profile: PROFILE_EN,
+    courses: COURSES_EN,
   },
   vi: {
     home: HOME_VI,
@@ -33,6 +36,7 @@ const resources = {
     bookings: BOOKINGS_VI,
     dashboard: DASHBOARD_VI,
     profile: PROFILE_VI,
+    courses: COURSES_VI,
   },
 };
 
@@ -40,7 +44,7 @@ i18n.use(initReactI18next).init({
   resources,
   lng: "en",
   fallbackLng: "en",
-  ns: ["home", "common", "toast", "tutors", "bookings", "dashboard", "profile"],
+  ns: ["home", "common", "toast", "tutors", "bookings", "dashboard", "profile", "courses"],
   defaultNS: "home",
   interpolation: {
     escapeValue: false,

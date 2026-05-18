@@ -432,8 +432,9 @@ const TutorDashboard = () => {
       {acceptTarget && (
         <AcceptBookingModal
           booking={acceptTarget}
+          tutorPricePerHour={profile?.pricePerHour || 0}
           onClose={() => setAcceptTarget(null)}
-          onSuccess={fetchBookings}
+          onSuccess={handleSuccess}
         />
       )}
       {rejectTarget && (

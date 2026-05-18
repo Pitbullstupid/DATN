@@ -21,5 +21,11 @@
   "education_removed": "Đã xóa học vấn.",
   "education_delete_failed": "Xóa thất bại.",
   "submit_success": "Đã gửi hồ sơ để duyệt!",
-  "submit_failed": "Gửi hồ sơ thất bại."
+  "submit_failed": "Gửi hồ sơ thất bại.",
+  "course_create_success": "Đã tạo lớp học thành công!",
+  "course_review_thanks": "Cảm ơn bạn đã đánh giá!",
+  "course_started": "Lớp học đã bắt đầu!",
+  "course_completed": "Khóa học đã hoàn thành!",
+  "course_cancelled": "Đã huỷ khóa học",
+  "session_updated": "Đã cập nhật buổi học"
 }

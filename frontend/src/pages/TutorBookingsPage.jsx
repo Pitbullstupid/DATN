@@ -14,6 +14,7 @@ import {
 import { FaCalendarAlt, FaTimes } from "react-icons/fa";
 import { getMyBookingsAsTutor, rejectBooking } from "../api/bookingApi";
 import { getDateLocale } from "../i18n/dateLocale";
+import { getMyProfile } from "../api/tutorApi";
 import AcceptBookingModal from "../components/AcceptBookingModal";
 
 const STATUS_TAB_KEYS = [
@@ -450,6 +451,7 @@ export default function TutorBookingsPage() {
   const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
   const [acceptTarget, setAcceptTarget] = useState(null);
   const [rejectTarget, setRejectTarget] = useState(null);
+  const [profile, setProfile] = useState(null);
 
   const statusTabs = useMemo(
     () =>
@@ -485,6 +487,20 @@ export default function TutorBookingsPage() {
       /* stats only */
     }
   }, []);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const { data } = await getMyProfile();
+        if (alive) setProfile(data?.data?.profile ?? null);
+      } catch {
+        if (alive) toast.error("Failed to load profile");
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     fetchBookings();
@@ -509,6 +525,7 @@ export default function TutorBookingsPage() {
       {acceptTarget && (
         <AcceptBookingModal
           booking={acceptTarget}
+          tutorPricePerHour={profile?.pricePerHour || 0}
           onClose={() => setAcceptTarget(null)}
           onSuccess={handleSuccess}
         />

@@ -21,5 +21,11 @@
   "education_removed": "Education record removed.",
   "education_delete_failed": "Failed to delete.",
   "submit_success": "Profile submitted for review!",
-  "submit_failed": "Submission failed."
+  "submit_failed": "Submission failed.",
+  "course_create_success": "Class created successfully!",
+  "course_review_thanks": "Thanks for your review!",
+  "course_started": "The class has started!",
+  "course_completed": "The course is completed!",
+  "course_cancelled": "The course has been cancelled.",
+  "session_updated": "Session updated."
 }

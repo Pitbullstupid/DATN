@@ -25,41 +25,36 @@ import {
   updateSession,
   reviewCourse,
 } from "../api/courseApi";
+import { useTranslation } from "react-i18next";
+import { getDateLocale } from "../i18n/dateLocale";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
 const COURSE_STATUS_STYLE = {
-  UPCOMING: { badge: "badge-info", label: "Upcoming", dot: "bg-info" },
-  ONGOING: { badge: "badge-warning", label: "Ongoing", dot: "bg-warning" },
-  COMPLETED: { badge: "badge-success", label: "Completed", dot: "bg-success" },
-  CANCELLED: { badge: "badge-error", label: "Cancelled", dot: "bg-error" },
+  UPCOMING: { badge: "badge-info", dot: "bg-info" },
+  ONGOING: { badge: "badge-warning", dot: "bg-warning" },
+  COMPLETED: { badge: "badge-success", dot: "bg-success" },
+  CANCELLED: { badge: "badge-error", dot: "bg-error" },
 };
 
-const SESSION_STATUS = {
+const SESSION_STATUS_UI = {
   SCHEDULED: {
     badge: "badge-ghost",
-    label: "Scheduled",
     icon: <FaClock size={11} className="text-base-content/40" />,
   },
   ONGOING: {
     badge: "badge-warning",
-    label: "Ongoing",
     icon: <FaPlay size={11} className="text-warning" />,
   },
   COMPLETED: {
     badge: "badge-success",
-    label: "Completed",
     icon: <FaCircleCheck size={11} className="text-success" />,
   },
   CANCELLED: {
     badge: "badge-error",
-    label: "Cancelled",
     icon: <FaCircleXmark size={11} className="text-error" />,
   },
   ABSENT: {
     badge: "badge-error",
-    label: "Absent",
     icon: <FaUserXmark size={11} className="text-error" />,
   },
 };
@@ -72,18 +67,18 @@ const SESSION_ACTIONS = [
   "ABSENT",
 ];
 
-const fmtDate = (iso) =>
+const fmtDate = (iso, locale) =>
   iso
-    ? new Date(iso).toLocaleDateString("vi-VN", {
+    ? new Date(iso).toLocaleDateString(locale, {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
       })
     : "—";
 
-const fmtDateTime = (iso) =>
+const fmtDateTime = (iso, locale) =>
   iso
-    ? new Date(iso).toLocaleString("vi-VN", {
+    ? new Date(iso).toLocaleString(locale, {
         weekday: "short",
         day: "2-digit",
         month: "2-digit",
@@ -94,10 +89,14 @@ const fmtDateTime = (iso) =>
 
 // ─── Review Modal ─────────────────────────────────────────────────────────────
 const ReviewModal = ({ course, onClose, onSuccess }) => {
+  const { t } = useTranslation(["courses", "toast"]);
   const [rating, setRating] = useState(5);
   const [hover, setHover] = useState(0);
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
+  const ratingScale = t("courses:detail.ratingScale", {
+    returnObjects: true,
+  });
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -106,7 +105,7 @@ const ReviewModal = ({ course, onClose, onSuccess }) => {
         rating,
         comment: comment.trim() || undefined,
       });
-      toast.success("Cảm ơn bạn đã đánh giá!");
+      toast.success(t("toast:course_review_thanks"));
       onSuccess();
       onClose();
     } catch (err) {
@@ -120,7 +119,7 @@ const ReviewModal = ({ course, onClose, onSuccess }) => {
     <dialog open className="modal modal-bottom sm:modal-middle">
       <div className="modal-box w-full max-w-md p-0 rounded-2xl overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-base-200">
-          <h3 className="font-bold text-lg">Đánh giá khóa học</h3>
+          <h3 className="font-bold text-lg">{t("courses:detail.reviewTitle")}</h3>
           <button className="btn btn-ghost btn-sm btn-circle" onClick={onClose}>
             <FaXmark size={15} />
           </button>
@@ -143,11 +142,14 @@ const ReviewModal = ({ course, onClose, onSuccess }) => {
             </div>
           </div>
           <div>
-            <p className="text-sm font-medium mb-2">Đánh giá của bạn</p>
+            <p className="text-sm font-medium mb-2">
+              {t("courses:detail.yourRating")}
+            </p>
             <div className="flex gap-2">
               {[1, 2, 3, 4, 5].map((s) => (
                 <button
                   key={s}
+                  type="button"
                   onMouseEnter={() => setHover(s)}
                   onMouseLeave={() => setHover(0)}
                   onClick={() => setRating(s)}
@@ -163,23 +165,19 @@ const ReviewModal = ({ course, onClose, onSuccess }) => {
               ))}
             </div>
             <p className="text-xs text-base-content/40 mt-1">
-              {
-                ["", "Tệ", "Bình thường", "Tốt", "Rất tốt", "Xuất sắc"][
-                  hover || rating
-                ]
-              }
+              {ratingScale[hover || rating]}
             </p>
           </div>
           <div>
             <label className="text-sm font-medium mb-1 block">
-              Nhận xét{" "}
+              {t("courses:detail.comment")}{" "}
               <span className="text-base-content/40 font-normal">
-                (tùy chọn)
+                {t("courses:detail.commentOptional")}
               </span>
             </label>
             <textarea
               rows={3}
-              placeholder="Chia sẻ cảm nhận của bạn..."
+              placeholder={t("courses:detail.commentPlaceholder")}
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               className="textarea textarea-bordered w-full resize-none text-sm focus:outline-none focus:border-primary"
@@ -188,13 +186,15 @@ const ReviewModal = ({ course, onClose, onSuccess }) => {
         </div>
         <div className="px-6 pb-6 flex gap-2">
           <button
+            type="button"
             className="btn btn-ghost flex-1"
             onClick={onClose}
             disabled={loading}
           >
-            Huỷ
+            {t("courses:detail.cancel")}
           </button>
           <button
+            type="button"
             className="btn btn-warning flex-1 gap-2"
             onClick={handleSubmit}
             disabled={loading}
@@ -204,7 +204,7 @@ const ReviewModal = ({ course, onClose, onSuccess }) => {
             ) : (
               <FaStar size={13} />
             )}
-            Gửi đánh giá
+            {t("courses:detail.submitReview")}
           </button>
         </div>
       </div>
@@ -215,12 +215,13 @@ const ReviewModal = ({ course, onClose, onSuccess }) => {
 
 // ─── Progress bar ─────────────────────────────────────────────────────────────
 const ProgressBar = ({ done, total }) => {
+  const { t } = useTranslation("courses");
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   return (
     <div>
       <div className="flex justify-between text-xs text-base-content/50 mb-1">
         <span>
-          {done}/{total} buổi
+          {t("list.sessionsProgress", { done, total })}
         </span>
         <span>{pct}%</span>
       </div>
@@ -239,6 +240,9 @@ export default function CourseDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t, i18n } = useTranslation(["courses", "toast", "bookings"]);
+  const dateLocale = getDateLocale(i18n.language);
+  const weekdayShort = t("courses:shared.weekdayShort", { returnObjects: true });
 
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -276,10 +280,14 @@ export default function CourseDetailPage() {
     return (
       <div className="min-h-screen bg-base-200 flex flex-col items-center justify-center gap-4">
         <p className="text-error text-lg font-medium">
-          {error || "Không tìm thấy lớp học"}
+          {error || t("courses:detail.notFound")}
         </p>
-        <button className="btn btn-primary btn-sm" onClick={() => navigate(-1)}>
-          <FaArrowLeft size={12} /> Quay lại
+        <button
+          type="button"
+          className="btn btn-primary btn-sm"
+          onClick={() => navigate(-1)}
+        >
+          <FaArrowLeft size={12} /> {t("courses:detail.back")}
         </button>
       </div>
     );
@@ -287,11 +295,14 @@ export default function CourseDetailPage() {
   const isTutor = user?.role === "TUTOR";
   const isStudent = user?.role === "STUDENT";
   const st = COURSE_STATUS_STYLE[course.status] ?? COURSE_STATUS_STYLE.UPCOMING;
+  const courseStatusLabel = t(`courses:detail.courseStatus.${course.status}`, {
+    defaultValue: course.status,
+  });
 
   const handleStart = async () => {
     try {
       await startCourse(id);
-      toast.success("Lớp học đã bắt đầu!");
+      toast.success(t("toast:course_started"));
       fetchCourse();
     } catch (err) {
       toast.error(err.message);
@@ -299,10 +310,10 @@ export default function CourseDetailPage() {
   };
 
   const handleComplete = async () => {
-    if (!window.confirm("Xác nhận kết thúc khóa học?")) return;
+    if (!window.confirm(t("courses:detail.confirmComplete"))) return;
     try {
       await completeCourse(id);
-      toast.success("Khóa học đã hoàn thành!");
+      toast.success(t("toast:course_completed"));
       fetchCourse();
     } catch (err) {
       toast.error(err.message);
@@ -310,10 +321,10 @@ export default function CourseDetailPage() {
   };
 
   const handleCancel = async () => {
-    if (!window.confirm("Bạn chắc chắn muốn huỷ khóa học này?")) return;
+    if (!window.confirm(t("courses:detail.confirmCancel"))) return;
     try {
       await cancelCourse(id);
-      toast.success("Đã huỷ khóa học");
+      toast.success(t("toast:course_cancelled"));
       fetchCourse();
     } catch (err) {
       toast.error(err.message);
@@ -324,7 +335,7 @@ export default function CourseDetailPage() {
     setUpdatingSession(sessionId);
     try {
       await updateSession(id, sessionId, { status });
-      toast.success("Đã cập nhật buổi học");
+      toast.success(t("toast:session_updated"));
       fetchCourse();
     } catch (err) {
       toast.error(err.message);
@@ -349,44 +360,28 @@ export default function CourseDetailPage() {
           className="btn btn-ghost btn-sm gap-2 text-base-content/60 hover:text-base-content mb-4"
           onClick={() => navigate(-1)}
         >
-          <FaArrowLeft size={12} /> Quay lại
+          <FaArrowLeft size={12} /> {t("courses:detail.back")}
         </button>
       </div>
 
       <div className="max-w-5xl mx-auto px-4 pb-12 space-y-5">
         {/* ── Course header card ──────────────────────────────── */}
         <div className="bg-base-100 rounded-2xl shadow-sm border border-base-200 p-6">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-4">
-              <img
-                src={
-                  (isTutor
-                    ? course.student?.avatar
-                    : course.tutorProfile?.user?.avatar) ||
-                  `https://ui-avatars.com/api/?name=T&size=80&background=random`
-                }
-                alt=""
-                className="w-14 h-14 rounded-full object-cover border-2 border-base-200"
-              />
-              <div>
-                <h1 className="text-xl font-bold text-base-content">
-                  {course.subject}
-                </h1>
-                <p className="text-sm text-base-content/60 mt-0.5">
-                  {isTutor
-                    ? `Student: ${course.student?.name}`
-                    : `Tutor: ${course.tutorProfile?.user?.name}`}
-                </p>
-                <div className="flex items-center gap-2 mt-1.5">
-                  <span className={`badge ${st.badge} badge-sm`}>
-                    {st.label}
+          {/* Top row: subject + status + actions */}
+          <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
+            <div>
+              <h1 className="text-xl font-bold text-base-content">
+                {course.subject}
+              </h1>
+              <div className="flex items-center gap-2 mt-1.5">
+                <span className={`badge ${st.badge} badge-sm`}>
+                  {courseStatusLabel}
+                </span>
+                {course.review && (
+                  <span className="flex items-center gap-1 text-xs text-warning font-semibold">
+                    <FaStar size={11} /> {course.review.rating}.0
                   </span>
-                  {course.review && (
-                    <span className="flex items-center gap-1 text-xs text-warning">
-                      <FaStar size={11} /> {course.review.rating}.0
-                    </span>
-                  )}
-                </div>
+                )}
               </div>
             </div>
 
@@ -397,7 +392,7 @@ export default function CourseDetailPage() {
                   className="btn btn-sm btn-info gap-1.5"
                   onClick={handleStart}
                 >
-                  <FaPlay size={10} /> Bắt đầu lớp
+                  <FaPlay size={10} /> {t("courses:detail.startClass")}
                 </button>
               )}
               {isTutor && course.status === "ONGOING" && (
@@ -405,7 +400,7 @@ export default function CourseDetailPage() {
                   className="btn btn-sm btn-success gap-1.5"
                   onClick={handleComplete}
                 >
-                  <FaCheck size={10} /> Kết thúc khóa
+                  <FaCheck size={10} /> {t("courses:detail.completeCourse")}
                 </button>
               )}
               {["UPCOMING", "ONGOING"].includes(course.status) && (
@@ -413,7 +408,7 @@ export default function CourseDetailPage() {
                   className="btn btn-sm btn-error btn-outline gap-1.5"
                   onClick={handleCancel}
                 >
-                  <FaXmark size={10} /> Huỷ lớp
+                  <FaXmark size={10} /> {t("courses:detail.cancelClass")}
                 </button>
               )}
               {isStudent && course.status === "COMPLETED" && !course.review && (
@@ -421,8 +416,92 @@ export default function CourseDetailPage() {
                   className="btn btn-sm btn-warning gap-1.5"
                   onClick={() => setShowReview(true)}
                 >
-                  <FaStar size={11} /> Đánh giá
+                  <FaStar size={11} /> {t("courses:detail.rate")}
                 </button>
+              )}
+            </div>
+          </div>
+
+          {/* Tutor + Student side by side */}
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Tutor */}
+            <div className="flex items-center gap-3 flex-1 min-w-0 bg-base-200/50 rounded-xl px-4 py-3">
+              <div className="relative shrink-0">
+                <img
+                  src={
+                    course.tutorProfile?.user?.avatar ||
+                    `https://ui-avatars.com/api/?name=${encodeURIComponent(course.tutorProfile?.user?.name || "T")}&size=80&background=random`
+                  }
+                  alt={course.tutorProfile?.user?.name}
+                  className="w-11 h-11 rounded-full object-cover border-2 border-base-100"
+                />
+                <span className="absolute -bottom-1 -right-1 bg-primary text-primary-content text-[9px] font-bold px-1 rounded-full leading-4">
+                  {t("courses:detail.badgeTutor")}
+                </span>
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-base-content/50 font-medium">
+                  {t("courses:detail.roleTutor")}
+                </p>
+                <p className="font-semibold text-sm text-base-content truncate">
+                  {course.tutorProfile?.user?.name || "—"}
+                </p>
+                {course.tutorProfile?.subjects?.[0] && (
+                  <p className="text-xs text-base-content/40 truncate">
+                    {t("bookings:student.tutor_role", {
+                      subject: course.tutorProfile.subjects[0],
+                    })}
+                  </p>
+                )}
+              </div>
+              {/* Badge "Bạn" nếu là tutor đang xem */}
+              {isTutor && (
+                <span className="badge badge-primary badge-xs ml-auto shrink-0">
+                  {t("courses:detail.you")}
+                </span>
+              )}
+            </div>
+
+            {/* Arrow separator */}
+            <div className="flex flex-col items-center gap-1 shrink-0 px-1">
+              <div className="w-px h-4 bg-base-300" />
+              <span className="text-base-content/30 text-xs">↔</span>
+              <div className="w-px h-4 bg-base-300" />
+            </div>
+
+            {/* Student */}
+            <div className="flex items-center gap-3 flex-1 min-w-0 bg-base-200/50 rounded-xl px-4 py-3">
+              <div className="relative shrink-0">
+                <img
+                  src={
+                    course.student?.avatar ||
+                    `https://ui-avatars.com/api/?name=${encodeURIComponent(course.student?.name || "S")}&size=80&background=random`
+                  }
+                  alt={course.student?.name}
+                  className="w-11 h-11 rounded-full object-cover border-2 border-base-100"
+                />
+                <span className="absolute -bottom-1 -right-1 bg-secondary text-secondary-content text-[9px] font-bold px-1 rounded-full leading-4">
+                  {t("courses:detail.badgeStudent")}
+                </span>
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-base-content/50 font-medium">
+                  {t("courses:detail.roleStudent")}
+                </p>
+                <p className="font-semibold text-sm text-base-content truncate">
+                  {course.student?.name || "—"}
+                </p>
+                {course.student?.email && (
+                  <p className="text-xs text-base-content/40 truncate">
+                    {course.student.email}
+                  </p>
+                )}
+              </div>
+              {/* Badge "Bạn" nếu là student đang xem */}
+              {isStudent && (
+                <span className="badge badge-secondary badge-xs ml-auto shrink-0">
+                  {t("courses:detail.you")}
+                </span>
               )}
             </div>
           </div>
@@ -442,29 +521,33 @@ export default function CourseDetailPage() {
             {/* Course info */}
             <div className="bg-base-100 rounded-2xl shadow-sm border border-base-200 p-5">
               <h2 className="font-bold text-base-content text-sm mb-4">
-                Thông tin khóa học
+                {t("courses:detail.courseInfo")}
               </h2>
               <div className="space-y-3 text-sm">
                 {[
                   {
                     icon: <FaCalendarAlt className="text-primary" size={13} />,
-                    label: "Bắt đầu",
-                    value: fmtDate(course.startDate),
+                    label: t("courses:detail.labelStart"),
+                    value: fmtDate(course.startDate, dateLocale),
                   },
                   {
                     icon: <FaCalendarAlt className="text-primary" size={13} />,
-                    label: "Kết thúc",
-                    value: fmtDate(course.endDate),
+                    label: t("courses:detail.labelEnd"),
+                    value: fmtDate(course.endDate, dateLocale),
                   },
                   {
                     icon: <FaClock className="text-primary" size={13} />,
-                    label: "Thời lượng",
-                    value: `${course.durationMin} phút/buổi`,
+                    label: t("courses:detail.labelDuration"),
+                    value: t("courses:detail.durationValue", {
+                      minutes: course.durationMin,
+                    }),
                   },
                   {
                     icon: <FaBookOpen className="text-primary" size={13} />,
-                    label: "Tổng số buổi",
-                    value: `${course.totalSessions} buổi`,
+                    label: t("courses:detail.labelTotalSessions"),
+                    value: t("courses:detail.sessionsValue", {
+                      count: course.totalSessions,
+                    }),
                   },
                   ...(course.pricePerSession != null
                     ? [
@@ -474,7 +557,7 @@ export default function CourseDetailPage() {
                               $
                             </span>
                           ),
-                          label: "Giá/buổi",
+                          label: t("courses:detail.labelPriceSession"),
                           value: `$${Number(course.pricePerSession).toFixed(2)}`,
                         },
                         {
@@ -483,20 +566,20 @@ export default function CourseDetailPage() {
                               Σ
                             </span>
                           ),
-                          label: "Tổng học phí",
+                          label: t("courses:detail.labelTotalPrice"),
                           value: `$${Number(course.totalPrice).toFixed(2)}`,
                         },
                       ]
                     : []),
-                ].map(({ icon, label, value }) => (
-                  <div key={label} className="flex items-center gap-3">
+                ].map((row) => (
+                  <div key={row.label} className="flex items-center gap-3">
                     <div className="w-6 flex items-center justify-center shrink-0">
-                      {icon}
+                      {row.icon}
                     </div>
                     <div className="flex-1 flex items-center justify-between">
-                      <span className="text-base-content/50">{label}</span>
+                      <span className="text-base-content/50">{row.label}</span>
                       <span className="font-medium text-base-content">
-                        {value}
+                        {row.value}
                       </span>
                     </div>
                   </div>
@@ -514,7 +597,7 @@ export default function CourseDetailPage() {
             {course.schedules?.length > 0 && (
               <div className="bg-base-100 rounded-2xl shadow-sm border border-base-200 p-5">
                 <h2 className="font-bold text-base-content text-sm mb-3">
-                  Thời khóa biểu
+                  {t("courses:detail.schedule")}
                 </h2>
                 <div className="space-y-2">
                   {course.schedules.map((s) => (
@@ -522,8 +605,8 @@ export default function CourseDetailPage() {
                       key={s.id}
                       className="flex items-center gap-3 bg-base-200/60 rounded-xl px-4 py-2.5"
                     >
-                      <span className="badge badge-primary badge-sm font-semibold min-w-[36px] justify-center">
-                        {DAY_NAMES[s.dayOfWeek]}
+                      <span className="badge badge-primary badge-sm font-semibold min-w-9 justify-center">
+                        {weekdayShort[s.dayOfWeek]}
                       </span>
                       <span className="text-sm text-base-content font-medium">
                         {s.startTime} – {s.endTime}
@@ -538,7 +621,7 @@ export default function CourseDetailPage() {
             {course.review && (
               <div className="bg-warning/10 border border-warning/20 rounded-2xl p-5">
                 <h2 className="font-bold text-base-content text-sm mb-3">
-                  Đánh giá
+                  {t("courses:detail.reviewSection")}
                 </h2>
                 <div className="flex gap-1 mb-2">
                   {Array.from({ length: 5 }).map((_, i) => (
@@ -569,11 +652,13 @@ export default function CourseDetailPage() {
               <div className="flex items-center justify-between px-5 py-4 border-b border-base-200">
                 <div>
                   <h2 className="font-bold text-base-content text-sm">
-                    Danh sách buổi học
+                    {t("courses:detail.sessionList")}
                   </h2>
                   <p className="text-xs text-base-content/40 mt-0.5">
-                    {course.sessionsDone}/{course.totalSessions} buổi đã hoàn
-                    thành
+                    {t("courses:detail.sessionsDoneLine", {
+                      done: course.sessionsDone,
+                      total: course.totalSessions,
+                    })}
                   </p>
                 </div>
                 <button
@@ -589,16 +674,20 @@ export default function CourseDetailPage() {
               </div>
 
               {expandSessions && (
-                <div className="divide-y divide-base-200 max-h-[600px] overflow-y-auto">
+                <div className="divide-y divide-base-200 max-h-150 overflow-y-auto">
                   {course.sessions?.length === 0 ? (
                     <div className="py-12 text-center text-base-content/30 text-sm">
-                      Chưa có buổi học nào
+                      {t("courses:detail.noSessions")}
                     </div>
                   ) : (
                     course.sessions.map((s) => {
                       const sst =
-                        SESSION_STATUS[s.status] ?? SESSION_STATUS.SCHEDULED;
+                        SESSION_STATUS_UI[s.status] ?? SESSION_STATUS_UI.SCHEDULED;
                       const isUpdating = updatingSession === s.id;
+                      const sessionStatusLabel = t(
+                        `courses:detail.sessionStatus.${s.status}`,
+                        { defaultValue: s.status }
+                      );
 
                       return (
                         <div
@@ -616,10 +705,12 @@ export default function CourseDetailPage() {
                             {/* Info */}
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-base-content">
-                                {fmtDateTime(s.scheduledAt)}
+                                {fmtDateTime(s.scheduledAt, dateLocale)}
                               </p>
                               <p className="text-xs text-base-content/50">
-                                {s.durationMin} phút
+                                {t("courses:detail.sessionMinutes", {
+                                  minutes: s.durationMin,
+                                })}
                               </p>
                               {s.note && (
                                 <p className="text-xs text-base-content/40 italic mt-0.5">
@@ -633,7 +724,7 @@ export default function CourseDetailPage() {
                               <div className="flex items-center gap-1.5">
                                 {sst.icon}
                                 <span className={`badge ${sst.badge} badge-xs`}>
-                                  {sst.label}
+                                  {sessionStatusLabel}
                                 </span>
                               </div>
 
@@ -648,7 +739,9 @@ export default function CourseDetailPage() {
                                 >
                                   {SESSION_ACTIONS.map((a) => (
                                     <option key={a} value={a}>
-                                      {SESSION_STATUS[a]?.label}
+                                      {t(`courses:detail.sessionStatus.${a}`, {
+                                        defaultValue: a,
+                                      })}
                                     </option>
                                   ))}
                                 </select>

@@ -14,6 +14,9 @@
     "total": "Tổng giao dịch",
     "subject": "Tổng môn học"
   },
+  "gallery": {
+    "title": "Nổi bật"
+  },
   "categories":{
     "title": "Khám phá các khóa học",
     "description": "Tìm kiếm những khóa học phù hợp với yêu cầu của bạn",
