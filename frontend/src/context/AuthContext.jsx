@@ -1,5 +1,6 @@
 import { createContext, useContext, useState } from "react";
 import { authApi } from "../api/authApi.js";
+import { userApi } from "../api/userApi.js";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
@@ -13,6 +14,25 @@ export const AuthProvider = ({ children }) => {
       localStorage.getItem("user") || sessionStorage.getItem("user");
     return saved ? JSON.parse(saved) : null;
   });
+
+  const refreshUser = async () => {
+    try {
+      const { data } = await userApi.getMe();
+      const updated = data?.data?.user;
+      if (!updated) return;
+
+      setUser(updated);
+
+      // Cập nhật đúng storage đang dùng
+      if (localStorage.getItem("token")) {
+        localStorage.setItem("user", JSON.stringify(updated));
+      } else {
+        sessionStorage.setItem("user", JSON.stringify(updated));
+      }
+    } catch (err) {
+      console.error("refreshUser failed:", err);
+    }
+  };
 
   const login = async (formData, rememberMe = false) => {
     const { data } = await authApi.login(formData);
@@ -56,7 +76,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, register, login, logout }}>
+    <AuthContext.Provider value={{ user, register, login, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

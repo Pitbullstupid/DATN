@@ -6,6 +6,7 @@ import tutorRoutes from "./routes/tutorRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import courseRoutes from "./routes/courseRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -36,7 +37,7 @@ app.use("/api/tutors", tutorRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/courses", courseRoutes);
-
+app.use("/api/users", userRoutes);
 
 const server = app.listen(PORT, () => {
   console.log(`Backend đang chạy ở cổng http://localhost:${PORT}`);

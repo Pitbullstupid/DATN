@@ -123,6 +123,23 @@
       "COMPLETED": "Completed",
       "CANCELLED": "Cancelled",
       "ABSENT": "Absent"
-    }
+    },
+    "progressComplete": "{{done}}/{{total}} sessions completed",
+    "confirmEndTutor": "Are you sure you want to request ending this course?",
+    "confirmEndStudent": "Are you sure you want to confirm ending this course?",
+    "requestEndTutor": "Request to end",
+    "requestEndStudent": "Confirm end",
+    "waitingEndFromStudent": "Waiting for the student to confirm ending",
+    "waitingEndFromTutor": "Waiting for the tutor to confirm ending",
+    "confirmSession": "Confirm completion",
+    "waitingSessionFromStudent": "Waiting for student confirmation",
+    "waitingSessionFromTutor": "Waiting for tutor confirmation",
+    "sessionLocked": "Locked",
+    "tabSessions": "Sessions ({{count}})",
+    "tabChat": "Messages",
+    "chatEmpty": "No messages yet",
+    "chatPlaceholder": "Type a message... (Enter to send)",
+    "sessionsTabSubtitle": "{{done}}/{{total}} completed",
+    "labelSessionsCount": "Sessions"
   }
 }

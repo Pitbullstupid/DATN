@@ -15,7 +15,7 @@ const Banner = () => {
   const { t } = useTranslation();
 
   const handleGetStarted = () => {
-    if (user?.role === "STUDENT") navigate("/search");
+    if (user?.role === "STUDENT") navigate("/tutors");
     else if (user?.role === "TUTOR") navigate("/tutor/dashboard");
     else document.getElementById("modal_login").showModal();
   };

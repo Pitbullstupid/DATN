@@ -12,6 +12,8 @@ import { Toaster } from "react-hot-toast";
 
 import CourseListPage from "./pages/CourseListPage.jsx";
 import CourseDetailPage from "./pages/CourseDetailPage.jsx";
+import ProfileStudent from "./pages/ProfileStudent.jsx";
+import StudentEditProfilePage from "./pages/StudentEditProfilePage.jsx";
 function App() {
   const { user } = useAuth();
   return (
@@ -42,6 +44,15 @@ function App() {
           />
           <Route path="/courses" element={<CourseListPage />} />
           <Route path="/courses/:id" element={<CourseDetailPage />} />
+          {user?.role === "STUDENT" && (
+            <>
+              <Route path="/profile" element={<ProfileStudent />} />
+            </>
+          )}
+          <Route
+            path="/student/profile/edit"
+            element={<StudentEditProfilePage />}
+          />
         </Routes>
       </main>
     </div>

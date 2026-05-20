@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
@@ -14,29 +14,35 @@ import {
   FaUserXmark,
   FaChevronDown,
   FaChevronUp,
+  FaPaperPlane,
+  FaCircleInfo,
+  FaLock,
 } from "react-icons/fa6";
 import { FaCalendarAlt } from "react-icons/fa";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
+import { getDateLocale } from "../i18n/dateLocale";
 import {
   getCourseById,
   startCourse,
-  completeCourse,
+  requestEndCourse,
   cancelCourse,
   updateSession,
+  confirmSession,
   reviewCourse,
+  getMessages,
+  sendMessage,
 } from "../api/courseApi";
-import { useTranslation } from "react-i18next";
-import { getDateLocale } from "../i18n/dateLocale";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const COURSE_STATUS_STYLE = {
-  UPCOMING: { badge: "badge-info", dot: "bg-info" },
-  ONGOING: { badge: "badge-warning", dot: "bg-warning" },
-  COMPLETED: { badge: "badge-success", dot: "bg-success" },
-  CANCELLED: { badge: "badge-error", dot: "bg-error" },
+  UPCOMING: { badge: "badge-info" },
+  ONGOING: { badge: "badge-warning" },
+  COMPLETED: { badge: "badge-success" },
+  CANCELLED: { badge: "badge-error" },
 };
 
-const SESSION_STATUS_UI = {
+const SESSION_STATUS_STYLE = {
   SCHEDULED: {
     badge: "badge-ghost",
     icon: <FaClock size={11} className="text-base-content/40" />,
@@ -59,14 +65,6 @@ const SESSION_STATUS_UI = {
   },
 };
 
-const SESSION_ACTIONS = [
-  "SCHEDULED",
-  "ONGOING",
-  "COMPLETED",
-  "CANCELLED",
-  "ABSENT",
-];
-
 const fmtDate = (iso, locale) =>
   iso
     ? new Date(iso).toLocaleDateString(locale, {
@@ -87,6 +85,14 @@ const fmtDateTime = (iso, locale) =>
       })
     : "—";
 
+const fmtTime = (iso, locale) =>
+  iso
+    ? new Date(iso).toLocaleTimeString(locale, {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
+
 // ─── Review Modal ─────────────────────────────────────────────────────────────
 const ReviewModal = ({ course, onClose, onSuccess }) => {
   const { t } = useTranslation(["courses", "toast"]);
@@ -94,9 +100,7 @@ const ReviewModal = ({ course, onClose, onSuccess }) => {
   const [hover, setHover] = useState(0);
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
-  const ratingScale = t("courses:detail.ratingScale", {
-    returnObjects: true,
-  });
+  const ratingScale = t("courses:detail.ratingScale", { returnObjects: true });
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -129,7 +133,7 @@ const ReviewModal = ({ course, onClose, onSuccess }) => {
             <img
               src={
                 course.tutorProfile?.user?.avatar ||
-                `https://ui-avatars.com/api/?name=${encodeURIComponent(course.tutorProfile?.user?.name || "T")}&size=80&background=random`
+                `https://ui-avatars.com/api/?name=T&size=80`
               }
               className="w-10 h-10 rounded-full object-cover"
               alt=""
@@ -149,7 +153,6 @@ const ReviewModal = ({ course, onClose, onSuccess }) => {
               {[1, 2, 3, 4, 5].map((s) => (
                 <button
                   key={s}
-                  type="button"
                   onMouseEnter={() => setHover(s)}
                   onMouseLeave={() => setHover(0)}
                   onClick={() => setRating(s)}
@@ -177,16 +180,15 @@ const ReviewModal = ({ course, onClose, onSuccess }) => {
             </label>
             <textarea
               rows={3}
-              placeholder={t("courses:detail.commentPlaceholder")}
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              className="textarea textarea-bordered w-full resize-none text-sm focus:outline-none focus:border-primary"
+              className="textarea textarea-bordered w-full resize-none text-sm"
+              placeholder={t("courses:detail.commentPlaceholder")}
             />
           </div>
         </div>
         <div className="px-6 pb-6 flex gap-2">
           <button
-            type="button"
             className="btn btn-ghost flex-1"
             onClick={onClose}
             disabled={loading}
@@ -194,7 +196,6 @@ const ReviewModal = ({ course, onClose, onSuccess }) => {
             {t("courses:detail.cancel")}
           </button>
           <button
-            type="button"
             className="btn btn-warning flex-1 gap-2"
             onClick={handleSubmit}
             disabled={loading}
@@ -220,9 +221,7 @@ const ProgressBar = ({ done, total }) => {
   return (
     <div>
       <div className="flex justify-between text-xs text-base-content/50 mb-1">
-        <span>
-          {t("list.sessionsProgress", { done, total })}
-        </span>
+        <span>{t("detail.progressComplete", { done, total })}</span>
         <span>{pct}%</span>
       </div>
       <div className="w-full bg-base-300 rounded-full h-2">
@@ -230,6 +229,166 @@ const ProgressBar = ({ done, total }) => {
           className="bg-primary h-2 rounded-full transition-all duration-500"
           style={{ width: `${pct}%` }}
         />
+      </div>
+    </div>
+  );
+};
+
+// ─── Confirm indicator ────────────────────────────────────────────────────────
+const ConfirmBadges = ({ tutorConfirmed, studentConfirmed, small = false }) => {
+  const { t } = useTranslation("courses");
+  return (
+    <div className={`flex gap-1.5 ${small ? "text-[10px]" : "text-xs"}`}>
+      <span
+        className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full ${tutorConfirmed ? "bg-success/20 text-success" : "bg-base-300 text-base-content/40"}`}
+      >
+        <FaCheck size={small ? 8 : 9} /> {t("detail.badgeTutor")}
+      </span>
+      <span
+        className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full ${studentConfirmed ? "bg-success/20 text-success" : "bg-base-300 text-base-content/40"}`}
+      >
+        <FaCheck size={small ? 8 : 9} /> {t("detail.badgeStudent")}
+      </span>
+    </div>
+  );
+};
+
+// ─── Chat panel ───────────────────────────────────────────────────────────────
+const ChatPanel = ({ courseId, currentUserId }) => {
+  const { t, i18n } = useTranslation("courses");
+  const dateLocale = getDateLocale(i18n.language);
+  const [messages, setMessages] = useState([]);
+  const [text, setText] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const bottomRef = useRef(null);
+
+  const fetchMessages = useCallback(async () => {
+    try {
+      const res = await getMessages(courseId, { limit: 100 });
+      setMessages(res.data?.data?.messages || []);
+    } catch {}
+  }, [courseId]);
+
+  useEffect(() => {
+    fetchMessages();
+  }, [fetchMessages]);
+
+  // Poll every 5s
+  useEffect(() => {
+    const intervalId = setInterval(fetchMessages, 5000);
+    return () => clearInterval(intervalId);
+  }, [fetchMessages]);
+
+  // Auto scroll xuống cuối
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSend = async () => {
+    if (!text.trim() || sending) return;
+    setSending(true);
+    try {
+      const res = await sendMessage(courseId, text.trim());
+      setMessages((prev) => [...prev, res.data?.data?.message]);
+      setText("");
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleKey = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+        {messages.length === 0 && (
+          <div className="flex items-center justify-center h-full text-base-content/30 text-sm">
+            {t("detail.chatEmpty")}
+          </div>
+        )}
+        {messages.map((msg, i) => {
+          const isMine =
+            msg.senderId === currentUserId || msg.sender?.id === currentUserId;
+          const showAvatar =
+            !isMine && (i === 0 || messages[i - 1]?.senderId !== msg.senderId);
+          return (
+            <div
+              key={msg.id}
+              className={`flex items-end gap-2 ${isMine ? "flex-row-reverse" : "flex-row"}`}
+            >
+              {/* Avatar (chỉ hiện khi message đầu tiên trong nhóm) */}
+              {!isMine && (
+                <div className="w-7 h-7 shrink-0">
+                  {showAvatar && (
+                    <img
+                      src={
+                        msg.sender?.avatar ||
+                        `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.sender?.name || "?")}&size=56&background=random`
+                      }
+                      alt={msg.sender?.name}
+                      className="w-7 h-7 rounded-full object-cover"
+                    />
+                  )}
+                </div>
+              )}
+
+              <div
+                className={`max-w-[70%] flex flex-col ${isMine ? "items-end" : "items-start"}`}
+              >
+                {showAvatar && !isMine && (
+                  <span className="text-[10px] text-base-content/40 mb-0.5 ml-1">
+                    {msg.sender?.name}
+                  </span>
+                )}
+                <div
+                  className={`px-3 py-2 rounded-2xl text-sm leading-relaxed break-words ${
+                    isMine
+                      ? "bg-primary text-primary-content rounded-br-sm"
+                      : "bg-base-200 text-base-content rounded-bl-sm"
+                  }`}
+                >
+                  {msg.content}
+                </div>
+                <span className="text-[10px] text-base-content/30 mt-0.5 mx-1">
+                  {fmtTime(msg.createdAt, dateLocale)}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input */}
+      <div className="border-t border-base-200 p-3 flex gap-2 items-end">
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={handleKey}
+          placeholder={t("detail.chatPlaceholder")}
+          rows={1}
+          className="textarea textarea-bordered flex-1 resize-none text-sm focus:outline-none focus:border-primary min-h-[40px] max-h-[100px]"
+        />
+        <button
+          className="btn btn-primary btn-sm btn-circle shrink-0"
+          onClick={handleSend}
+          disabled={!text.trim() || sending}
+        >
+          {sending ? (
+            <span className="loading loading-spinner loading-xs" />
+          ) : (
+            <FaPaperPlane size={13} />
+          )}
+        </button>
       </div>
     </div>
   );
@@ -249,12 +408,12 @@ export default function CourseDetailPage() {
   const [error, setError] = useState("");
   const [showReview, setShowReview] = useState(false);
   const [expandSessions, setExpandSessions] = useState(true);
-
-  // Session update state
+  const [activeTab, setActiveTab] = useState("sessions"); // "sessions" | "chat"
   const [updatingSession, setUpdatingSession] = useState(null);
+  const [confirmingSession, setConfirmingSession] = useState(null);
+  const [requestingEnd, setRequestingEnd] = useState(false);
 
-  const fetchCourse = async () => {
-    setLoading(true);
+  const fetchCourse = useCallback(async () => {
     try {
       const res = await getCourseById(id);
       setCourse(res.data?.data?.course);
@@ -263,11 +422,11 @@ export default function CourseDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchCourse();
-  }, [id]);
+  }, [fetchCourse]);
 
   if (loading)
     return (
@@ -275,7 +434,6 @@ export default function CourseDetailPage() {
         <span className="loading loading-spinner loading-lg text-primary" />
       </div>
     );
-
   if (error || !course)
     return (
       <div className="min-h-screen bg-base-200 flex flex-col items-center justify-center gap-4">
@@ -309,14 +467,20 @@ export default function CourseDetailPage() {
     }
   };
 
-  const handleComplete = async () => {
-    if (!window.confirm(t("courses:detail.confirmComplete"))) return;
+  const handleRequestEnd = async () => {
+    const confirmMsg = isTutor
+      ? t("courses:detail.confirmEndTutor")
+      : t("courses:detail.confirmEndStudent");
+    if (!window.confirm(confirmMsg)) return;
+    setRequestingEnd(true);
     try {
-      await completeCourse(id);
-      toast.success(t("toast:course_completed"));
+      const res = await requestEndCourse(id);
+      toast.success(res.data.message);
       fetchCourse();
     } catch (err) {
       toast.error(err.message);
+    } finally {
+      setRequestingEnd(false);
     }
   };
 
@@ -335,7 +499,6 @@ export default function CourseDetailPage() {
     setUpdatingSession(sessionId);
     try {
       await updateSession(id, sessionId, { status });
-      toast.success(t("toast:session_updated"));
       fetchCourse();
     } catch (err) {
       toast.error(err.message);
@@ -343,6 +506,27 @@ export default function CourseDetailPage() {
       setUpdatingSession(null);
     }
   };
+
+  const handleConfirmSession = async (sessionId) => {
+    setConfirmingSession(sessionId);
+    try {
+      const res = await confirmSession(id, sessionId);
+      toast.success(res.data.message);
+      fetchCourse();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setConfirmingSession(null);
+    }
+  };
+
+  // Trạng thái confirm kết thúc khóa
+  const myEndConfirmed = isTutor
+    ? course.tutorConfirmedEnd
+    : course.studentConfirmedEnd;
+  const theirEndConfirmed = isTutor
+    ? course.studentConfirmedEnd
+    : course.tutorConfirmedEnd;
 
   return (
     <div className="min-h-screen bg-base-200">
@@ -354,10 +538,9 @@ export default function CourseDetailPage() {
         />
       )}
 
-      {/* Back */}
       <div className="max-w-5xl mx-auto px-4 pt-6">
         <button
-          className="btn btn-ghost btn-sm gap-2 text-base-content/60 hover:text-base-content mb-4"
+          className="btn btn-ghost btn-sm gap-2 text-base-content/60 mb-4"
           onClick={() => navigate(-1)}
         >
           <FaArrowLeft size={12} /> {t("courses:detail.back")}
@@ -365,9 +548,9 @@ export default function CourseDetailPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 pb-12 space-y-5">
-        {/* ── Course header card ──────────────────────────────── */}
+        {/* ── Header card ──────────────────────────────────────── */}
         <div className="bg-base-100 rounded-2xl shadow-sm border border-base-200 p-6">
-          {/* Top row: subject + status + actions */}
+          {/* Title + status + actions */}
           <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
             <div>
               <h1 className="text-xl font-bold text-base-content">
@@ -385,7 +568,7 @@ export default function CourseDetailPage() {
               </div>
             </div>
 
-            {/* Action buttons */}
+            {/* Actions */}
             <div className="flex flex-wrap gap-2">
               {isTutor && course.status === "UPCOMING" && (
                 <button
@@ -395,14 +578,37 @@ export default function CourseDetailPage() {
                   <FaPlay size={10} /> {t("courses:detail.startClass")}
                 </button>
               )}
-              {isTutor && course.status === "ONGOING" && (
+
+              {/* Kết thúc khóa - 2 chiều */}
+              {course.status === "ONGOING" && !myEndConfirmed && (
                 <button
-                  className="btn btn-sm btn-success gap-1.5"
-                  onClick={handleComplete}
+                  className={`btn btn-sm gap-1.5 ${isTutor ? "btn-warning" : "btn-success"}`}
+                  onClick={handleRequestEnd}
+                  disabled={requestingEnd}
                 >
-                  <FaCheck size={10} /> {t("courses:detail.completeCourse")}
+                  {requestingEnd ? (
+                    <span className="loading loading-spinner loading-xs" />
+                  ) : (
+                    <FaCheck size={10} />
+                  )}
+                  {isTutor
+                    ? t("courses:detail.requestEndTutor")
+                    : t("courses:detail.requestEndStudent")}
                 </button>
               )}
+
+              {/* Đã confirm, chờ bên kia */}
+              {course.status === "ONGOING" &&
+                myEndConfirmed &&
+                !theirEndConfirmed && (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-warning/10 border border-warning/30 rounded-xl text-xs text-warning">
+                    <FaCircleInfo size={12} />
+                    {isTutor
+                      ? t("courses:detail.waitingEndFromStudent")
+                      : t("courses:detail.waitingEndFromTutor")}
+                  </div>
+                )}
+
               {["UPCOMING", "ONGOING"].includes(course.status) && (
                 <button
                   className="btn btn-sm btn-error btn-outline gap-1.5"
@@ -422,25 +628,24 @@ export default function CourseDetailPage() {
             </div>
           </div>
 
-          {/* Tutor + Student side by side */}
-          <div className="flex items-center gap-3 flex-wrap">
-            {/* Tutor */}
+          {/* Tutor ↔ Student */}
+          <div className="flex items-center gap-3 flex-wrap mb-5">
             <div className="flex items-center gap-3 flex-1 min-w-0 bg-base-200/50 rounded-xl px-4 py-3">
               <div className="relative shrink-0">
                 <img
                   src={
                     course.tutorProfile?.user?.avatar ||
-                    `https://ui-avatars.com/api/?name=${encodeURIComponent(course.tutorProfile?.user?.name || "T")}&size=80&background=random`
+                    `https://ui-avatars.com/api/?name=T&size=80&background=random`
                   }
-                  alt={course.tutorProfile?.user?.name}
                   className="w-11 h-11 rounded-full object-cover border-2 border-base-100"
+                  alt=""
                 />
                 <span className="absolute -bottom-1 -right-1 bg-primary text-primary-content text-[9px] font-bold px-1 rounded-full leading-4">
                   {t("courses:detail.badgeTutor")}
                 </span>
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-base-content/50 font-medium">
+                <p className="text-xs text-base-content/50">
                   {t("courses:detail.roleTutor")}
                 </p>
                 <p className="font-semibold text-sm text-base-content truncate">
@@ -454,7 +659,6 @@ export default function CourseDetailPage() {
                   </p>
                 )}
               </div>
-              {/* Badge "Bạn" nếu là tutor đang xem */}
               {isTutor && (
                 <span className="badge badge-primary badge-xs ml-auto shrink-0">
                   {t("courses:detail.you")}
@@ -462,30 +666,28 @@ export default function CourseDetailPage() {
               )}
             </div>
 
-            {/* Arrow separator */}
             <div className="flex flex-col items-center gap-1 shrink-0 px-1">
               <div className="w-px h-4 bg-base-300" />
               <span className="text-base-content/30 text-xs">↔</span>
               <div className="w-px h-4 bg-base-300" />
             </div>
 
-            {/* Student */}
             <div className="flex items-center gap-3 flex-1 min-w-0 bg-base-200/50 rounded-xl px-4 py-3">
               <div className="relative shrink-0">
                 <img
                   src={
                     course.student?.avatar ||
-                    `https://ui-avatars.com/api/?name=${encodeURIComponent(course.student?.name || "S")}&size=80&background=random`
+                    `https://ui-avatars.com/api/?name=S&size=80&background=random`
                   }
-                  alt={course.student?.name}
                   className="w-11 h-11 rounded-full object-cover border-2 border-base-100"
+                  alt=""
                 />
                 <span className="absolute -bottom-1 -right-1 bg-secondary text-secondary-content text-[9px] font-bold px-1 rounded-full leading-4">
                   {t("courses:detail.badgeStudent")}
                 </span>
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-base-content/50 font-medium">
+                <p className="text-xs text-base-content/50">
                   {t("courses:detail.roleStudent")}
                 </p>
                 <p className="font-semibold text-sm text-base-content truncate">
@@ -497,7 +699,6 @@ export default function CourseDetailPage() {
                   </p>
                 )}
               </div>
-              {/* Badge "Bạn" nếu là student đang xem */}
               {isStudent && (
                 <span className="badge badge-secondary badge-xs ml-auto shrink-0">
                   {t("courses:detail.you")}
@@ -507,20 +708,18 @@ export default function CourseDetailPage() {
           </div>
 
           {/* Progress */}
-          <div className="mt-5">
-            <ProgressBar
-              done={course.sessionsDone}
-              total={course.totalSessions}
-            />
-          </div>
+          <ProgressBar
+            done={course.sessionsDone}
+            total={course.totalSessions}
+          />
         </div>
 
+        {/* ── Body ───────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* ── Left: info + schedule ───────────────────────── */}
+          {/* LEFT: course info + schedule + review */}
           <div className="space-y-5">
-            {/* Course info */}
             <div className="bg-base-100 rounded-2xl shadow-sm border border-base-200 p-5">
-              <h2 className="font-bold text-base-content text-sm mb-4">
+              <h2 className="font-bold text-sm text-base-content mb-4">
                 {t("courses:detail.courseInfo")}
               </h2>
               <div className="space-y-3 text-sm">
@@ -544,7 +743,7 @@ export default function CourseDetailPage() {
                   },
                   {
                     icon: <FaBookOpen className="text-primary" size={13} />,
-                    label: t("courses:detail.labelTotalSessions"),
+                    label: t("courses:detail.labelSessionsCount"),
                     value: t("courses:detail.sessionsValue", {
                       count: course.totalSessions,
                     }),
@@ -571,21 +770,20 @@ export default function CourseDetailPage() {
                         },
                       ]
                     : []),
-                ].map((row) => (
-                  <div key={row.label} className="flex items-center gap-3">
+                ].map(({ icon, label, value }) => (
+                  <div key={label} className="flex items-center gap-3">
                     <div className="w-6 flex items-center justify-center shrink-0">
-                      {row.icon}
+                      {icon}
                     </div>
                     <div className="flex-1 flex items-center justify-between">
-                      <span className="text-base-content/50">{row.label}</span>
+                      <span className="text-base-content/50">{label}</span>
                       <span className="font-medium text-base-content">
-                        {row.value}
+                        {value}
                       </span>
                     </div>
                   </div>
                 ))}
               </div>
-
               {course.note && (
                 <div className="mt-4 bg-base-200/60 rounded-xl px-4 py-2.5 text-xs text-base-content/60 italic">
                   "{course.note}"
@@ -593,10 +791,10 @@ export default function CourseDetailPage() {
               )}
             </div>
 
-            {/* Weekly schedule */}
+            {/* TKB */}
             {course.schedules?.length > 0 && (
               <div className="bg-base-100 rounded-2xl shadow-sm border border-base-200 p-5">
-                <h2 className="font-bold text-base-content text-sm mb-3">
+                <h2 className="font-bold text-sm text-base-content mb-3">
                   {t("courses:detail.schedule")}
                 </h2>
                 <div className="space-y-2">
@@ -605,10 +803,10 @@ export default function CourseDetailPage() {
                       key={s.id}
                       className="flex items-center gap-3 bg-base-200/60 rounded-xl px-4 py-2.5"
                     >
-                      <span className="badge badge-primary badge-sm font-semibold min-w-9 justify-center">
+                      <span className="badge badge-primary badge-sm font-semibold min-w-[40px] justify-center">
                         {weekdayShort[s.dayOfWeek]}
                       </span>
-                      <span className="text-sm text-base-content font-medium">
+                      <span className="text-sm font-medium text-base-content">
                         {s.startTime} – {s.endTime}
                       </span>
                     </div>
@@ -620,7 +818,7 @@ export default function CourseDetailPage() {
             {/* Review */}
             {course.review && (
               <div className="bg-warning/10 border border-warning/20 rounded-2xl p-5">
-                <h2 className="font-bold text-base-content text-sm mb-3">
+                <h2 className="font-bold text-sm text-base-content mb-3">
                   {t("courses:detail.reviewSection")}
                 </h2>
                 <div className="flex gap-1 mb-2">
@@ -645,119 +843,205 @@ export default function CourseDetailPage() {
             )}
           </div>
 
-          {/* ── Right: session list ──────────────────────────── */}
-          <div className="lg:col-span-2">
-            <div className="bg-base-100 rounded-2xl shadow-sm border border-base-200 overflow-hidden">
-              {/* Header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-base-200">
-                <div>
-                  <h2 className="font-bold text-base-content text-sm">
-                    {t("courses:detail.sessionList")}
-                  </h2>
-                  <p className="text-xs text-base-content/40 mt-0.5">
-                    {t("courses:detail.sessionsDoneLine", {
-                      done: course.sessionsDone,
-                      total: course.totalSessions,
-                    })}
-                  </p>
-                </div>
+          {/* RIGHT: sessions + chat tabs */}
+          <div
+            className="lg:col-span-2 flex flex-col gap-0 bg-base-100 rounded-2xl shadow-sm border border-base-200 overflow-hidden"
+            style={{ height: "680px" }}
+          >
+            {/* Tab bar */}
+            <div className="flex border-b border-base-200 shrink-0">
+              {[
+                {
+                  key: "sessions",
+                  label: t("courses:detail.tabSessions", {
+                    count: course.sessions?.length || 0,
+                  }),
+                },
+                { key: "chat", label: t("courses:detail.tabChat") },
+              ].map((tab) => (
                 <button
-                  className="btn btn-ghost btn-sm btn-circle"
-                  onClick={() => setExpandSessions((v) => !v)}
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 ${
+                    activeTab === tab.key
+                      ? "border-primary text-primary"
+                      : "border-transparent text-base-content/50 hover:text-base-content"
+                  }`}
                 >
-                  {expandSessions ? (
-                    <FaChevronUp size={13} />
-                  ) : (
-                    <FaChevronDown size={13} />
-                  )}
+                  {tab.label}
                 </button>
-              </div>
+              ))}
+            </div>
 
-              {expandSessions && (
-                <div className="divide-y divide-base-200 max-h-150 overflow-y-auto">
-                  {course.sessions?.length === 0 ? (
-                    <div className="py-12 text-center text-base-content/30 text-sm">
-                      {t("courses:detail.noSessions")}
-                    </div>
-                  ) : (
-                    course.sessions.map((s) => {
-                      const sst =
-                        SESSION_STATUS_UI[s.status] ?? SESSION_STATUS_UI.SCHEDULED;
-                      const isUpdating = updatingSession === s.id;
-                      const sessionStatusLabel = t(
-                        `courses:detail.sessionStatus.${s.status}`,
-                        { defaultValue: s.status }
-                      );
+            {/* Sessions tab */}
+            {activeTab === "sessions" && (
+              <div className="flex-1 overflow-y-auto">
+                <div className="px-5 py-3 border-b border-base-200 flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-sm text-base-content">
+                      {t("courses:detail.sessionList")}
+                    </p>
+                    <p className="text-xs text-base-content/40">
+                      {t("courses:detail.sessionsTabSubtitle", {
+                        done: course.sessionsDone,
+                        total: course.totalSessions,
+                      })}
+                    </p>
+                  </div>
+                </div>
 
-                      return (
-                        <div
-                          key={s.id}
-                          className="px-5 py-3.5 hover:bg-base-200/30 transition-colors"
-                        >
-                          <div className="flex items-center gap-3">
-                            {/* Number */}
-                            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <div className="divide-y divide-base-200">
+                  {course.sessions?.map((s) => {
+                    const sst =
+                      SESSION_STATUS_STYLE[s.status] ??
+                      SESSION_STATUS_STYLE.SCHEDULED;
+                    const locked = s.tutorConfirmed && s.studentConfirmed;
+                    const isUpdating = updatingSession === s.id;
+                    const isConfirming = confirmingSession === s.id;
+
+                    // Người dùng hiện tại đã confirm chưa
+                    const myConfirmed = isTutor
+                      ? s.tutorConfirmed
+                      : s.studentConfirmed;
+                    const theirConfirmed = isTutor
+                      ? s.studentConfirmed
+                      : s.tutorConfirmed;
+
+                    const sessionStatusLabel = t(
+                      `courses:detail.sessionStatus.${s.status}`,
+                      { defaultValue: s.status },
+                    );
+
+                    return (
+                      <div
+                        key={s.id}
+                        className={`px-5 py-3.5 transition-colors ${locked ? "bg-success/5" : "hover:bg-base-200/30"}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          {/* Number */}
+                          <div
+                            className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${locked ? "bg-success/20" : "bg-primary/10"}`}
+                          >
+                            {locked ? (
+                              <FaLock size={9} className="text-success" />
+                            ) : (
                               <span className="text-xs font-bold text-primary">
                                 {s.sessionNumber}
                               </span>
-                            </div>
+                            )}
+                          </div>
 
-                            {/* Info */}
-                            <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <p className="text-sm font-medium text-base-content">
                                 {fmtDateTime(s.scheduledAt, dateLocale)}
                               </p>
-                              <p className="text-xs text-base-content/50">
-                                {t("courses:detail.sessionMinutes", {
-                                  minutes: s.durationMin,
-                                })}
-                              </p>
-                              {s.note && (
-                                <p className="text-xs text-base-content/40 italic mt-0.5">
-                                  "{s.note}"
-                                </p>
+                              <span className={`badge ${sst.badge} badge-xs`}>
+                                {sessionStatusLabel}
+                              </span>
+                              {locked && (
+                                <span className="badge badge-success badge-xs gap-1">
+                                  <FaLock size={7} />{" "}
+                                  {t("courses:detail.sessionLocked")}
+                                </span>
                               )}
                             </div>
+                            <p className="text-xs text-base-content/50 mt-0.5">
+                              {t("courses:detail.sessionMinutes", {
+                                minutes: s.durationMin,
+                              })}
+                            </p>
+                            {s.note && (
+                              <p className="text-xs text-base-content/40 italic mt-0.5">
+                                "{s.note}"
+                              </p>
+                            )}
 
-                            {/* Status + tutor action */}
-                            <div className="flex items-center gap-2 shrink-0">
-                              <div className="flex items-center gap-1.5">
-                                {sst.icon}
-                                <span className={`badge ${sst.badge} badge-xs`}>
-                                  {sessionStatusLabel}
+                            {/* Confirm badges */}
+                            <div className="flex items-center gap-2 mt-2 flex-wrap">
+                              <ConfirmBadges
+                                tutorConfirmed={s.tutorConfirmed}
+                                studentConfirmed={s.studentConfirmed}
+                                small
+                              />
+
+                              {/* Nút confirm của user hiện tại */}
+                              {course.status === "ONGOING" &&
+                                !locked &&
+                                !myConfirmed &&
+                                (s.status === "ONGOING" ||
+                                  s.status === "COMPLETED") && (
+                                  <button
+                                    className="btn btn-xs btn-success gap-1"
+                                    onClick={() => handleConfirmSession(s.id)}
+                                    disabled={isConfirming}
+                                  >
+                                    {isConfirming ? (
+                                      <span className="loading loading-spinner loading-xs" />
+                                    ) : (
+                                      <FaCheck size={8} />
+                                    )}
+                                    {t("courses:detail.confirmSession")}
+                                  </button>
+                                )}
+
+                              {!locked && myConfirmed && !theirConfirmed && (
+                                <span className="text-xs text-warning flex items-center gap-1">
+                                  <FaCircleInfo size={10} />
+                                  {isTutor
+                                    ? t("courses:detail.waitingSessionFromStudent")
+                                    : t("courses:detail.waitingSessionFromTutor")}
                                 </span>
-                              </div>
-
-                              {isTutor && course.status === "ONGOING" && (
-                                <select
-                                  value={s.status}
-                                  disabled={isUpdating}
-                                  onChange={(e) =>
-                                    handleUpdateSession(s.id, e.target.value)
-                                  }
-                                  className="select select-xs select-bordered bg-base-100 focus:outline-none"
-                                >
-                                  {SESSION_ACTIONS.map((a) => (
-                                    <option key={a} value={a}>
-                                      {t(`courses:detail.sessionStatus.${a}`, {
-                                        defaultValue: a,
-                                      })}
-                                    </option>
-                                  ))}
-                                </select>
-                              )}
-                              {isUpdating && (
-                                <span className="loading loading-spinner loading-xs text-primary" />
                               )}
                             </div>
                           </div>
+
+                          {/* Tutor dropdown — chỉ khi chưa lock */}
+                          {isTutor &&
+                            course.status === "ONGOING" &&
+                            !locked && (
+                              <select
+                                value={s.status}
+                                disabled={isUpdating}
+                                onChange={(e) =>
+                                  handleUpdateSession(s.id, e.target.value)
+                                }
+                                className="select select-xs select-bordered bg-base-100 focus:outline-none shrink-0"
+                              >
+                                {[
+                                  "SCHEDULED",
+                                  "ONGOING",
+                                  "COMPLETED",
+                                  "CANCELLED",
+                                  "ABSENT",
+                                ].map((statusKey) => (
+                                  <option key={statusKey} value={statusKey}>
+                                    {t(
+                                      `courses:detail.sessionStatus.${statusKey}`,
+                                      { defaultValue: statusKey },
+                                    )}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                          {isUpdating && (
+                            <span className="loading loading-spinner loading-xs text-primary shrink-0" />
+                          )}
                         </div>
-                      );
-                    })
-                  )}
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
+            {/* Chat tab */}
+            {activeTab === "chat" && (
+              <div className="flex-1 min-h-0 flex flex-col">
+                <ChatPanel courseId={id} currentUserId={user?.id} />
+              </div>
+            )}
           </div>
         </div>
       </div>

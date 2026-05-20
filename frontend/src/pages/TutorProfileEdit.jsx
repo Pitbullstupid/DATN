@@ -1,13 +1,17 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
+import toast from "react-hot-toast";
 import {
   FiUser, FiBook, FiAward, FiShare2, FiGlobe,
   FiPhone, FiMapPin, FiDollarSign, FiClock,
   FiPlus, FiTrash2, FiChevronLeft, FiChevronRight,
   FiSend, FiCheckCircle, FiAlertCircle, FiInfo,
-  FiLinkedin, FiFacebook, FiTwitter, FiYoutube, FiInstagram,
+  FiFacebook, FiTwitter, FiYoutube, FiInstagram,
+  FiCamera,
 } from "react-icons/fi";
+import { useAuth } from "../context/AuthContext";
+import { userApi } from "../api/userApi";
 import {
   getMyProfile,
   updateStep1,
@@ -61,10 +65,28 @@ const FormField = ({ label, required, hint, error, children }) => (
 
 const inputCls = "input input-bordered input-sm w-full bg-base-100 focus:input-primary text-base-content";
 const textareaCls = "textarea textarea-bordered textarea-sm w-full bg-base-100 focus:textarea-primary text-base-content min-h-[90px] resize-none";
+const AVATAR_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const AVATAR_MAX_SIZE = 2 * 1024 * 1024;
 
 // ═════════════════════════════════════════════════════════════
+const showToast = (type, msg) => {
+  if (type === "success") {
+    toast.success(msg);
+    return;
+  }
+
+  if (type === "error") {
+    toast.error(msg);
+    return;
+  }
+
+  toast(msg);
+};
+
 const TutorProfileEdit = () => {
   const navigate = useNavigate();
+  const fileRef = useRef(null);
+  const { user, refreshUser } = useAuth();
   const { t } = useTranslation(["profile", "toast", "dashboard"]);
 
   // ── State ─────────────────────────────────────────────────
@@ -72,8 +94,9 @@ const TutorProfileEdit = () => {
   const [loading,  setLoading ] = useState(true);
   const [saving,   setSaving  ] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
-  const [toast,    setToast   ] = useState(null); // { type, msg }
   const [profileStatus, setProfileStatus] = useState("PENDING");
+  const [avatarPreview, setAvatarPreview] = useState(user?.avatar || "");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   // Step 1
   const [step1, setStep1] = useState({ bio: "", phone: "", address: "", country: "" });
@@ -100,6 +123,7 @@ const TutorProfileEdit = () => {
         const p = data?.data?.profile;
         if (!p) return;
         setProfileStatus(p.status ?? "PENDING");
+        setAvatarPreview(p.user?.avatar || "");
         setStep1({
           bio:     p.bio     ?? "",
           phone:   p.phone   ?? "",
@@ -131,16 +155,46 @@ const TutorProfileEdit = () => {
         setLoading(false);
       }
     })();
-  }, []);
-
-  // ── Toast ────────────────────────────────────────────────
-  const showToast = useCallback((type, msg) => {
-    setToast({ type, msg });
-    setTimeout(() => setToast(null), 3500);
-  }, []);
+  }, [t]);
 
   // ── Locked guard ─────────────────────────────────────────
   const isLocked = ["REVIEWING", "APPROVED", "SUSPENDED"].includes(profileStatus);
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    e.target.value = "";
+
+    if (!AVATAR_ALLOWED_TYPES.includes(file.type)) {
+      showToast("error", "Chỉ hỗ trợ ảnh JPG, JPEG, PNG hoặc WEBP");
+      return;
+    }
+
+    if (file.size > AVATAR_MAX_SIZE) {
+      showToast("error", "Ảnh không được vượt quá 2MB");
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    const previousAvatar = avatarPreview;
+    setAvatarPreview(objectUrl);
+    setUploadingAvatar(true);
+
+    try {
+      const res = await userApi.uploadAvatar(file);
+      const avatarUrl = res.data?.data?.user?.avatar;
+      setAvatarPreview(avatarUrl || "");
+      await refreshUser();
+      showToast("success", "Cập nhật ảnh đại diện thành công");
+    } catch (err) {
+      setAvatarPreview(previousAvatar || "");
+      showToast("error", err.message || "Upload ảnh thất bại");
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+      setUploadingAvatar(false);
+    }
+  };
 
   // ── Save handlers ────────────────────────────────────────
   const handleSaveStep = async () => {
@@ -329,6 +383,46 @@ const TutorProfileEdit = () => {
                 {/* ══ STEP 1 ══════════════════════════════ */}
                 {currentStep === 1 && (
                   <div className="space-y-5">
+                    <div className="flex items-center gap-4 rounded-xl border border-base-200 bg-base-100 p-4">
+                      <div className="avatar">
+                        <div className="w-20 rounded-full ring ring-primary/20 ring-offset-2 ring-offset-base-100">
+                          <img
+                            src={
+                              avatarPreview ||
+                              `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || "T")}&size=160&background=random`
+                            }
+                            alt={user?.name || "Tutor avatar"}
+                          />
+                        </div>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-base-content">{user?.name || "Gia sư"}</p>
+                        <p className="text-xs text-base-content/50">
+                          JPG, JPEG, PNG hoặc WEBP. Tối đa 2MB.
+                        </p>
+                      </div>
+                      <input
+                        ref={fileRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={handleAvatarChange}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-primary gap-2"
+                        onClick={() => fileRef.current?.click()}
+                        disabled={uploadingAvatar}
+                      >
+                        {uploadingAvatar ? (
+                          <span className="loading loading-spinner loading-xs" />
+                        ) : (
+                          <FiCamera size={14} />
+                        )}
+                        Đổi ảnh
+                      </button>
+                    </div>
+
                     <FormField label={t("profile:fields.bio")} hint={t("profile:fields.bio_hint")}>
                       <textarea
                         className={textareaCls}
@@ -762,18 +856,6 @@ const TutorProfileEdit = () => {
           )}
         </div>
       </div>
-
-      {/* ── Toast notification ───────────────────────────── */}
-      {toast && (
-        <div className="toast toast-top toast-end z-50">
-          <div className={`alert shadow-lg ${toast.type === "success" ? "alert-success" : "alert-error"}`}>
-            {toast.type === "success"
-              ? <FiCheckCircle size={15} />
-              : <FiAlertCircle size={15} />}
-            <span className="text-sm">{toast.msg}</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

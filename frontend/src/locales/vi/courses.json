@@ -123,6 +123,23 @@
       "COMPLETED": "Hoàn thành",
       "CANCELLED": "Đã huỷ",
       "ABSENT": "Vắng mặt"
-    }
+    },
+    "progressComplete": "{{done}}/{{total}} buổi hoàn thành",
+    "confirmEndTutor": "Bạn chắc chắn muốn yêu cầu kết thúc khóa học?",
+    "confirmEndStudent": "Bạn chắc chắn muốn xác nhận kết thúc khóa học?",
+    "requestEndTutor": "Yêu cầu kết thúc",
+    "requestEndStudent": "Xác nhận kết thúc",
+    "waitingEndFromStudent": "Đang chờ học viên xác nhận kết thúc",
+    "waitingEndFromTutor": "Đang chờ gia sư xác nhận kết thúc",
+    "confirmSession": "Xác nhận hoàn thành",
+    "waitingSessionFromStudent": "Chờ học viên xác nhận",
+    "waitingSessionFromTutor": "Chờ gia sư xác nhận",
+    "sessionLocked": "Đã khoá",
+    "tabSessions": "Buổi học ({{count}})",
+    "tabChat": "Tin nhắn",
+    "chatEmpty": "Chưa có tin nhắn nào",
+    "chatPlaceholder": "Nhắn tin... (Enter để gửi)",
+    "sessionsTabSubtitle": "{{done}}/{{total}} hoàn thành",
+    "labelSessionsCount": "Số buổi"
   }
 }

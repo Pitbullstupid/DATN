@@ -59,6 +59,8 @@ const register = async (req, res) => {
         email: newUser.email,
         role: newUser.role,
         avatar: newUser.avatar,
+        createdAt: newUser.createdAt,
+        gender:newUser.gender,
       },
       token,
       // Frontend dựa vào redirect này để điều hướng
@@ -116,6 +118,8 @@ const login = async (req, res) => {
         role: user.role,
         avatar: user.avatar,
         tutorStatus: user.tutorProfile?.status ?? null,
+        createdAt: user.createdAt,
+        gender:user.gender
       },
       token,
       redirect,
@@ -133,5 +137,6 @@ const logout = async (req, res) => {
     message: "Đăng xuất thành công",
   });
 };
+
 
 export { register, login, logout };

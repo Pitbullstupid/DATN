@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { FaXmark, FaPlus, FaTrash, FaCheck, FaCircleInfo } from "react-icons/fa6";
 import { createCourse } from "../api/courseApi";
+import { useNavigate } from "react-router-dom";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -193,7 +194,7 @@ export default function AcceptBookingModal({
     if (errors[`slot_${i}`] || errors.schedules)
       setErrors((e) => ({ ...e, [`slot_${i}`]: "", schedules: "" }));
   };
-
+  const navigate = useNavigate();
   const handleSubmit = async () => {
     const e = validate();
     if (Object.keys(e).length) {
@@ -216,6 +217,7 @@ export default function AcceptBookingModal({
       });
 
       toast.success(t("toast:course_create_success"));
+      navigate("/courses");
       onSuccess();
       onClose();
     } catch (err) {
@@ -224,6 +226,7 @@ export default function AcceptBookingModal({
       setLoading(false);
     }
   };
+
 
   // ── Render ───────────────────────────────────────────────────
   return (
