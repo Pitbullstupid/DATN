@@ -33,9 +33,11 @@ import {
   getMessages,
   sendMessage,
 } from "../api/courseApi";
+import PaymentBanner from "../components/PaymentBanner";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const COURSE_STATUS_STYLE = {
+  PENDING_PAYMENT: { badge: "badge-warning" },
   UPCOMING: { badge: "badge-info" },
   ONGOING: { badge: "badge-warning" },
   COMPLETED: { badge: "badge-success" },
@@ -123,7 +125,9 @@ const ReviewModal = ({ course, onClose, onSuccess }) => {
     <dialog open className="modal modal-bottom sm:modal-middle">
       <div className="modal-box w-full max-w-md p-0 rounded-2xl overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-base-200">
-          <h3 className="font-bold text-lg">{t("courses:detail.reviewTitle")}</h3>
+          <h3 className="font-bold text-lg">
+            {t("courses:detail.reviewTitle")}
+          </h3>
           <button className="btn btn-ghost btn-sm btn-circle" onClick={onClose}>
             <FaXmark size={15} />
           </button>
@@ -401,7 +405,9 @@ export default function CourseDetailPage() {
   const { user } = useAuth();
   const { t, i18n } = useTranslation(["courses", "toast", "bookings"]);
   const dateLocale = getDateLocale(i18n.language);
-  const weekdayShort = t("courses:shared.weekdayShort", { returnObjects: true });
+  const weekdayShort = t("courses:shared.weekdayShort", {
+    returnObjects: true,
+  });
 
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -609,7 +615,7 @@ export default function CourseDetailPage() {
                   </div>
                 )}
 
-              {["UPCOMING", "ONGOING"].includes(course.status) && (
+              {["PENDING_PAYMENT", "UPCOMING", "ONGOING"].includes(course.status) && (
                 <button
                   className="btn btn-sm btn-error btn-outline gap-1.5"
                   onClick={handleCancel}
@@ -713,7 +719,7 @@ export default function CourseDetailPage() {
             total={course.totalSessions}
           />
         </div>
-
+        <PaymentBanner course={course} isStudent={isStudent} />
         {/* ── Body ───────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* LEFT: course info + schedule + review */}
@@ -990,8 +996,12 @@ export default function CourseDetailPage() {
                                 <span className="text-xs text-warning flex items-center gap-1">
                                   <FaCircleInfo size={10} />
                                   {isTutor
-                                    ? t("courses:detail.waitingSessionFromStudent")
-                                    : t("courses:detail.waitingSessionFromTutor")}
+                                    ? t(
+                                        "courses:detail.waitingSessionFromStudent",
+                                      )
+                                    : t(
+                                        "courses:detail.waitingSessionFromTutor",
+                                      )}
                                 </span>
                               )}
                             </div>

@@ -49,6 +49,7 @@ enum BookingStatus {
 }
 
 enum CourseStatus {
+  PENDING_PAYMENT // chờ student thanh toán
   UPCOMING // chưa bắt đầu
   ONGOING // đang diễn ra
   COMPLETED // đã kết thúc
@@ -61,6 +62,22 @@ enum SessionStatus {
   COMPLETED // đã xong
   CANCELLED // bị huỷ / nghỉ
   ABSENT // học sinh vắng
+}
+
+// Thanh toan
+enum PaymentStatus {
+  PENDING // chờ thanh toán
+  PAID // đã thanh toán, đang giữ (escrow)
+  RELEASED // đã giải phóng cho tutor rút
+  REFUNDED // hoàn tiền
+  FAILED // thất bại
+}
+
+enum WithdrawStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
 }
 
 // ================== USER ==================
@@ -81,6 +98,8 @@ model User {
   reviews         Review[]         @relation("StudentReviews")
   bookingsSent    BookingRequest[] @relation("StudentBookings")
   enrolledCourses CourseClass[]    @relation("StudentCourses")
+  payments        Payment[]
+  studentPayments Payment[]        @relation("StudentPayments")
 
   @@map("users")
 }
@@ -126,6 +145,8 @@ model TutorProfile {
   reviews         Review[]
   bookingRequests BookingRequest[]
   courses         CourseClass[]
+  payments        Payment[]
+  wallet          TutorWallet?
 
   @@map("tutor_profiles")
 }
@@ -244,6 +265,7 @@ model CourseClass {
 
   // Tin nhắn trong lớp
   messages Message[]
+  payment  Payment?
 
   @@map("course_classes")
 }
@@ -339,4 +361,71 @@ model TutorSchedule {
   updatedAt DateTime @updatedAt
 
   @@map("tutor_schedules")
+}
+
+model Payment {
+  id             String       @id @default(uuid())
+  courseClassId  String       @unique
+  courseClass    CourseClass  @relation(fields: [courseClassId], references: [id])
+  studentId      String
+  student        User         @relation("StudentPayments", fields: [studentId], references: [id])
+  tutorProfileId String
+  tutorProfile   TutorProfile @relation(fields: [tutorProfileId], references: [id])
+
+  amount   Float // tổng tiền
+  currency String        @default("usd")
+  status   PaymentStatus @default(PENDING)
+
+  // Stripe fields
+  stripeSessionId     String? @unique
+  stripePaymentIntent String?
+  stripeChargeId      String?
+
+  paidAt     DateTime?
+  releasedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  withdrawal Withdrawal?
+  user       User?       @relation(fields: [userId], references: [id])
+  userId     String?
+
+  @@map("payments")
+}
+
+model TutorWallet {
+  id             String       @id @default(uuid())
+  tutorProfileId String       @unique
+  tutorProfile   TutorProfile @relation(fields: [tutorProfileId], references: [id])
+
+  balance     Float @default(0) // số dư có thể rút
+  heldAmount  Float @default(0) // đang giữ (escrow)
+  totalEarned Float @default(0) // tổng đã kiếm
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  withdrawals Withdrawal[]
+
+  @@map("tutor_wallets")
+}
+
+model Withdrawal {
+  id        String      @id @default(uuid())
+  walletId  String
+  wallet    TutorWallet @relation(fields: [walletId], references: [id])
+  paymentId String?     @unique
+  payment   Payment?    @relation(fields: [paymentId], references: [id])
+
+  amount Float
+  status WithdrawStatus @default(PENDING)
+
+  // Stripe Payout
+  stripePayoutId String?
+
+  requestedAt DateTime  @default(now())
+  completedAt DateTime?
+
+  @@map("withdrawals")
 }

@@ -1,0 +1,71 @@
+{
+  "banner": {
+    "tutorTitle": "Chờ học viên thanh toán",
+    "tutorDesc": "Thông tin lớp học đã gửi đến học viên. Lớp sẽ bắt đầu sau khi thanh toán hoàn tất.",
+    "studentTitle": "Hoàn tất thanh toán để bắt đầu học",
+    "studentDesc": "Tiền sẽ được giữ an toàn và chỉ chuyển cho gia sư sau khi bạn xác nhận hoàn thành khóa học.",
+    "course": "Khóa học",
+    "sessions": "Số buổi",
+    "sessionsValue": "{{count}} buổi",
+    "pricePerSession": "Giá/buổi",
+    "total": "Tổng thanh toán",
+    "payNow": "Thanh toán ngay",
+    "redirecting": "Đang chuyển đến Stripe...",
+    "secure": "Thanh toán an toàn qua Stripe"
+  },
+  "success": {
+    "title": "Thanh toán thành công!",
+    "course": "Khóa học:",
+    "sessions": "Số buổi:",
+    "tuition": "Học phí:",
+    "sessionsValue": "{{count}} buổi",
+    "desc": "Khóa học đã được kích hoạt. Gia sư sẽ liên hệ để bắt đầu lịch học.",
+    "viewCourse": "Xem lớp học",
+    "failedTitle": "Thanh toán thất bại",
+    "failedDesc": "Giao dịch không thành công hoặc đã bị hủy. Vui lòng thử lại.",
+    "back": "Quay lại"
+  },
+  "cancel": {
+    "title": "Thanh toán bị hủy",
+    "desc": "Bạn đã hủy giao dịch. Lớp học vẫn đang chờ thanh toán, bạn có thể thử lại bất cứ lúc nào.",
+    "retry": "Thử thanh toán lại",
+    "backToCourse": "Quay lại lớp học"
+  },
+  "wallet": {
+    "title": "Ví của tôi",
+    "subtitle": "Quản lý thu nhập và yêu cầu rút tiền",
+    "available": "Số dư khả dụng",
+    "held": "Đang giữ",
+    "totalEarned": "Tổng đã kiếm",
+    "needMin": "Cần ít nhất $10 để rút (hiện có ${{amount}})",
+    "withdrawCta": "Rút tiền (${{amount}} khả dụng)",
+    "heldInfo": "${{amount}} đang được giữ trong escrow. Tiền sẽ được giải phóng khi học viên xác nhận hoàn thành khóa học.",
+    "releasedTitle": "Thanh toán đã nhận",
+    "releasedSubtitle": "Các khoản đã được giải phóng",
+    "withdrawHistory": "Lịch sử rút tiền",
+    "status": {
+      "PENDING": "Đang chờ",
+      "PROCESSING": "Đang xử lý",
+      "COMPLETED": "Hoàn thành",
+      "FAILED": "Thất bại"
+    },
+    "modal": {
+      "title": "Yêu cầu rút tiền",
+      "amountLabel": "Số tiền muốn rút",
+      "all": "Tất cả",
+      "ruleProcessing": "Xử lý trong 1-3 ngày làm việc",
+      "ruleMinimum": "Tối thiểu $10/lần rút",
+      "ruleBank": "Tiền sẽ chuyển về tài khoản ngân hàng đã đăng ký",
+      "cancel": "Hủy",
+      "confirm": "Xác nhận rút"
+    },
+    "errors": {
+      "validAmount": "Nhập số tiền hợp lệ",
+      "insufficient": "Số dư không đủ. Tối đa ${{amount}}",
+      "minimum": "Số tiền rút tối thiểu là $10"
+    },
+    "toast": {
+      "withdrawSent": "Yêu cầu rút tiền đã gửi! Xử lý trong 1-3 ngày làm việc."
+    }
+  }
+}

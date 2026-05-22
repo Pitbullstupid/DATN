@@ -21,6 +21,7 @@ import { getDateLocale } from "../i18n/dateLocale";
 // ─── Constants ────────────────────────────────────────────────────────────────
 const STATUS_TABS = [
   { value: "", labelKey: "tabAll" },
+  { value: "PENDING_PAYMENT", labelKey: "tabPending" },
   { value: "UPCOMING", labelKey: "tabUpcoming" },
   { value: "ONGOING", labelKey: "tabOngoing" },
   { value: "COMPLETED", labelKey: "tabCompleted" },
@@ -28,6 +29,10 @@ const STATUS_TABS = [
 ];
 
 const STATUS_STYLE = {
+  PENDING_PAYMENT: {
+    badge: "badge-warning",
+    icon: <FaClock size={11} />,
+  },
   UPCOMING: {
     badge: "badge-info",
     icon: <FaCalendarAlt size={11} />,
@@ -83,6 +88,12 @@ const StatsBar = ({ courses }) => {
 
   const rows = [
     {
+      labelKey: "statsPendingPayment",
+      value: counts.PENDING_PAYMENT || 0,
+      color: "text-warning",
+      bg: "bg-warning/10",
+    },
+    {
       labelKey: "statsUpcoming",
       value: counts.UPCOMING || 0,
       color: "text-info",
@@ -109,7 +120,7 @@ const StatsBar = ({ courses }) => {
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
       {rows.map(({ labelKey, value, color, bg }) => (
         <div
           key={labelKey}
@@ -136,7 +147,9 @@ const CourseCard = ({ course, isTutor, onClick }) => {
       : 0;
 
   const person = isTutor ? course.student : course.tutorProfile?.user;
-  const weekdayShort = t("courses:shared.weekdayShort", { returnObjects: true });
+  const weekdayShort = t("courses:shared.weekdayShort", {
+    returnObjects: true,
+  });
 
   const statusLabel = t("courses:detail.courseStatus." + course.status, {
     defaultValue: course.status,
@@ -172,14 +185,18 @@ const CourseCard = ({ course, isTutor, onClick }) => {
             </p>
           </div>
         </div>
-        <span className={`badge ${st.badge} badge-sm font-medium shrink-0 gap-1`}>
+        <span
+          className={`badge ${st.badge} badge-sm font-medium shrink-0 gap-1`}
+        >
           {st.icon} {statusLabel}
         </span>
       </div>
 
       <div className="flex items-center gap-2 text-sm">
         <FaBookOpen size={12} className="text-primary shrink-0" />
-        <span className="font-semibold text-base-content">{course.subject}</span>
+        <span className="font-semibold text-base-content">
+          {course.subject}
+        </span>
       </div>
 
       <div>
@@ -234,7 +251,9 @@ const CourseCard = ({ course, isTutor, onClick }) => {
       <div className="flex items-center justify-between border-t border-base-200 pt-3 text-xs">
         <span className="flex items-center gap-1 text-base-content/50">
           <FaClock size={10} />{" "}
-          {t("courses:list.durationPerSessionShort", { minutes: course.durationMin })}
+          {t("courses:list.durationPerSessionShort", {
+            minutes: course.durationMin,
+          })}
         </span>
         <div className="flex items-center gap-3">
           {course.pricePerSession != null && (

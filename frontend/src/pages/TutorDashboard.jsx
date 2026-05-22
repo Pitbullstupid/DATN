@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   FiMail,
@@ -6,7 +6,6 @@ import {
   FiMapPin,
   FiUser,
   FiDollarSign,
-  FiTrendingUp,
   FiInbox,
   FiLayers,
   FiCheckCircle,
@@ -16,10 +15,12 @@ import {
   FiEdit2,
   FiAlertCircle,
 } from "react-icons/fi";
-import { FaCheck, FaTimes } from "react-icons/fa";
+import { FaCheckCircle, FaTimes } from "react-icons/fa";
 import { FaXmark } from "react-icons/fa6";
 import { getMyProfile } from "../api/tutorApi";
 import { getMyBookingsAsTutor, rejectBooking } from "../api/bookingApi";
+import { getMyCoursesAsTutor } from "../api/courseApi";
+import { paymentApi } from "../api/paymentApi";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -50,13 +51,6 @@ const INFO_ROW_KEYS = [
 ];
 
 const TABLE_HEADER_KEYS = ["student", "subject", "message", "status", "action"];
-
-const fmtDatetimeLocal = (iso) => {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-};
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 const Skeleton = ({ className = "" }) => (
@@ -293,9 +287,21 @@ const TutorDashboard = () => {
     accepted: 0,
     total: 0,
   });
+  const [courseStats, setCourseStats] = useState({
+    total: 0,
+    upcoming: 0,
+    ongoing: 0,
+    completed: 0,
+  });
+  const [walletStats, setWalletStats] = useState({
+    totalEarned: 0,
+    heldAmount: 0,
+    balance: 0,
+  });
 
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [loadingBookings, setLoadingBookings] = useState(true);
+  const [loadingStats, setLoadingStats] = useState(true);
   const [error, setError] = useState("");
 
   // Modals
@@ -318,7 +324,7 @@ const TutorDashboard = () => {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [t]);
 
   // ── Fetch bookings ─────────────────────────────────────────
   const fetchBookings = async () => {
@@ -346,7 +352,48 @@ const TutorDashboard = () => {
   };
 
   useEffect(() => {
-    fetchBookings();
+    const timer = setTimeout(() => {
+      fetchBookings();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const fetchDashboardStats = async () => {
+    setLoadingStats(true);
+    try {
+      const [coursesRes, walletRes] = await Promise.all([
+        getMyCoursesAsTutor({ limit: 200 }),
+        paymentApi.getMyWallet(),
+      ]);
+
+      const courses = coursesRes.data?.data?.courses || [];
+      const wallet = walletRes.data?.data?.wallet || {};
+
+      setCourseStats({
+        total: courses.length,
+        upcoming: courses.filter((c) => c.status === "UPCOMING").length,
+        ongoing: courses.filter((c) => c.status === "ONGOING").length,
+        completed: courses.filter((c) => c.status === "COMPLETED").length,
+      });
+      setWalletStats({
+        totalEarned: wallet.totalEarned ?? 0,
+        heldAmount: wallet.heldAmount ?? 0,
+        balance: wallet.balance ?? 0,
+      });
+    } catch {
+      // Stats are supplemental; keep the dashboard usable if one endpoint fails.
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchDashboardStats();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   // ── Derived profile values ─────────────────────────────────
@@ -371,6 +418,7 @@ const TutorDashboard = () => {
     defaultValue: t("dashboard:profile_status.PENDING"),
   });
   const infoValues = { joinDate, email, phone, address };
+  const formatUsd = (value) => `$${Number(value || 0).toFixed(2)}`;
 
   // ── Stat cards (dynamic) ───────────────────────────────────
   const statCards = [
@@ -381,6 +429,7 @@ const TutorDashboard = () => {
       icon: FiInbox,
       color: "text-warning",
       bg: "bg-warning/10",
+      to: "/tutor/bookings",
     },
     {
       label: t("dashboard:stats.total_booking"),
@@ -389,6 +438,7 @@ const TutorDashboard = () => {
       icon: FiLayers,
       color: "text-secondary",
       bg: "bg-secondary/10",
+      to: "/tutor/bookings",
     },
     {
       label: t("dashboard:stats.accepted"),
@@ -397,6 +447,7 @@ const TutorDashboard = () => {
       icon: FiCheckCircle,
       color: "text-success",
       bg: "bg-success/10",
+      to: "/tutor/bookings",
     },
     {
       label: t("dashboard:stats.rating"),
@@ -405,26 +456,33 @@ const TutorDashboard = () => {
       icon: FiStar,
       color: "text-warning",
       bg: "bg-warning/10",
+      to: "/tutor/profile/edit",
     },
     {
       label: t("dashboard:stats.total_payment"),
-      value: "$0.00",
+      value: formatUsd(walletStats.totalEarned),
       sub: t("dashboard:stats.usd"),
       icon: FiDollarSign,
       color: "text-success",
       bg: "bg-success/10",
+      to: "/tutor/wallet",
     },
     {
       label: t("dashboard:stats.total_ticket"),
-      value: "0",
+      value: String(courseStats.total),
       sub: t("dashboard:stats.tickets"),
       icon: FiCreditCard,
       color: "text-accent",
       bg: "bg-accent/10",
+      to: "/courses",
     },
   ];
 
-  const isLoading = loadingProfile || loadingBookings;
+  const isLoading = loadingProfile || loadingBookings || loadingStats;
+
+  const handleSuccess = () => {
+    fetchBookings();
+  };
 
   return (
     <div className="min-h-screen bg-base-200">
@@ -595,9 +653,11 @@ const TutorDashboard = () => {
               {statCards.map((card) => {
                 const Icon = card.icon;
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={card.label}
-                    className="bg-base-100 rounded-2xl p-5 shadow-sm border border-base-300 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                    onClick={() => navigate(card.to)}
+                    className="bg-base-100 rounded-2xl p-5 shadow-sm border border-base-300 hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-200 text-left"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
@@ -621,7 +681,7 @@ const TutorDashboard = () => {
                         <Icon size={18} />
                       </div>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -751,7 +811,7 @@ const TutorDashboard = () => {
                                     className="btn btn-xs btn-success gap-1"
                                     onClick={() => setAcceptTarget(b)}
                                   >
-                                    <FaCheck size={9} />{" "}
+                                    <FaCheckCircle size={9} />{" "}
                                     {t("dashboard:table.accept")}
                                   </button>
                                   <button

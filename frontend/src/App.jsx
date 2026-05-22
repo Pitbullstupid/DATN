@@ -14,6 +14,9 @@ import CourseListPage from "./pages/CourseListPage.jsx";
 import CourseDetailPage from "./pages/CourseDetailPage.jsx";
 import ProfileStudent from "./pages/ProfileStudent.jsx";
 import StudentEditProfilePage from "./pages/StudentEditProfilePage.jsx";
+import PaymentSuccessPage from "./components/PaymentSuccessPage.jsx";
+import PaymentCancelPage from "./components/PaymentCancelPage.jsx";
+import TutorWalletPage from "./components/TutorWalletPage.jsx";
 function App() {
   const { user } = useAuth();
   return (
@@ -53,6 +56,9 @@ function App() {
             path="/student/profile/edit"
             element={<StudentEditProfilePage />}
           />
+          <Route path="/payment/success" element={<PaymentSuccessPage />} />
+          <Route path="/payment/cancel" element={<PaymentCancelPage />} />
+          <Route path="/tutor/wallet" element={<TutorWalletPage />} />
         </Routes>
       </main>
     </div>

@@ -245,7 +245,7 @@ export default function ProfileStudent() {
                 </div>
                 <button
                   className="btn btn-ghost btn-xs text-secondary"
-                  onClick={() => navigate("/student/courses")}
+                  onClick={() => navigate("/courses")}
                 >
                   View all →
                 </button>
@@ -384,7 +384,7 @@ export default function ProfileStudent() {
                 )}
                 <button
                   className="btn btn-ghost btn-xs text-secondary"
-                  onClick={() => navigate("/student/bookings")}
+                  onClick={() => navigate("/tutor/bookings")}
                 >
                   View all →
                 </button>
