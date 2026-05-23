@@ -79,6 +79,34 @@ enum WithdrawStatus {
   COMPLETED
   FAILED
 }
+enum NotificationType {
+  // Booking
+  BOOKING_RECEIVED      // tutor nhận booking mới
+  BOOKING_ACCEPTED      // student: booking được accept
+  BOOKING_REJECTED      // student: booking bị reject
+  BOOKING_CANCELLED     // tutor: booking bị student huỷ
+
+  // Payment
+  PAYMENT_REQUIRED      // student: cần thanh toán
+  PAYMENT_SUCCESS       // student: thanh toán thành công
+  PAYMENT_RECEIVED      // tutor: nhận được thanh toán
+
+  // Course
+  COURSE_STARTED        // student: lớp đã bắt đầu
+  COURSE_COMPLETED      // cả 2: khóa học hoàn thành
+  COURSE_CANCELLED      // cả 2: khóa học bị huỷ
+
+  // Session
+  SESSION_CONFIRMED     // cả 2: buổi học đã xác nhận xong
+  SESSION_CONFIRM_WAIT  // chờ bên kia xác nhận buổi học
+
+  // End course confirm
+  END_COURSE_REQUESTED  // student: tutor yêu cầu kết thúc
+  END_COURSE_WAITING    // tutor: đang chờ student xác nhận
+
+  // Wallet
+  PAYMENT_RELEASED      // tutor: tiền được giải phóng
+}
 
 // ================== USER ==================
 
@@ -100,6 +128,7 @@ model User {
   enrolledCourses CourseClass[]    @relation("StudentCourses")
   payments        Payment[]
   studentPayments Payment[]        @relation("StudentPayments")
+  notifications Notification[]
 
   @@map("users")
 }
@@ -428,4 +457,23 @@ model Withdrawal {
   completedAt DateTime?
 
   @@map("withdrawals")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type      NotificationType
+  title     String
+  body      String
+  isRead    Boolean          @default(false)
+
+  // Link đến entity liên quan
+  courseId  String?
+  bookingId String?
+
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
 }

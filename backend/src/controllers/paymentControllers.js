@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { prisma } from "../config/db.js";
+import { notifyPaymentSuccess } from "../services/notificationService.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -14,20 +15,39 @@ export const createCheckoutSession = async (req, res) => {
     const course = await prisma.courseClass.findUnique({
       where: { id: courseId },
       include: {
-        tutorProfile: { select: { userId: true, user: { select: { name: true } } } },
-        student:      { select: { id: true, name: true, email: true } },
+        tutorProfile: {
+          select: { userId: true, user: { select: { name: true } } },
+        },
+        student: { select: { id: true, name: true, email: true } },
       },
     });
 
-    if (!course) return res.status(404).json({ status: "error", message: "Không tìm thấy khóa học" });
-    if (course.studentId !== req.user.id) return res.status(403).json({ status: "error", message: "Không có quyền" });
-    if (course.status !== "PENDING_PAYMENT") return res.status(400).json({ status: "error", message: "Khóa học không cần thanh toán" });
-    if (!course.totalPrice) return res.status(400).json({ status: "error", message: "Khóa học chưa có thông tin học phí" });
+    if (!course)
+      return res
+        .status(404)
+        .json({ status: "error", message: "Không tìm thấy khóa học" });
+    if (course.studentId !== req.user.id)
+      return res
+        .status(403)
+        .json({ status: "error", message: "Không có quyền" });
+    if (course.status !== "PENDING_PAYMENT")
+      return res
+        .status(400)
+        .json({ status: "error", message: "Khóa học không cần thanh toán" });
+    if (!course.totalPrice)
+      return res.status(400).json({
+        status: "error",
+        message: "Khóa học chưa có thông tin học phí",
+      });
 
     // Kiểm tra đã có payment chưa
-    const existingPayment = await prisma.payment.findUnique({ where: { courseClassId: courseId } });
+    const existingPayment = await prisma.payment.findUnique({
+      where: { courseClassId: courseId },
+    });
     if (existingPayment?.status === "PAID") {
-      return res.status(400).json({ status: "error", message: "Khóa học đã được thanh toán" });
+      return res
+        .status(400)
+        .json({ status: "error", message: "Khóa học đã được thanh toán" });
     }
 
     // Tạo Stripe Checkout Session
@@ -50,11 +70,11 @@ export const createCheckoutSession = async (req, res) => {
       ],
       metadata: {
         courseClassId: course.id,
-        studentId:     course.studentId,
+        studentId: course.studentId,
         tutorProfileId: course.tutorProfileId,
       },
       success_url: `${process.env.CLIENT_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url:  `${process.env.CLIENT_URL}/payment/cancel?course_id=${course.id}`,
+      cancel_url: `${process.env.CLIENT_URL}/payment/cancel?course_id=${course.id}`,
     });
 
     // Upsert Payment record với status PENDING
@@ -62,12 +82,12 @@ export const createCheckoutSession = async (req, res) => {
       where: { courseClassId: courseId },
       update: { stripeSessionId: session.id, status: "PENDING" },
       create: {
-        courseClassId:  courseId,
-        studentId:      course.studentId,
+        courseClassId: courseId,
+        studentId: course.studentId,
         tutorProfileId: course.tutorProfileId,
-        amount:         course.totalPrice,
-        currency:       "usd",
-        status:         "PENDING",
+        amount: course.totalPrice,
+        currency: "usd",
+        status: "PENDING",
         stripeSessionId: session.id,
       },
     });
@@ -93,7 +113,7 @@ export const stripeWebhook = async (req, res) => {
     event = stripe.webhooks.constructEvent(
       req.body, // raw buffer
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET
+      process.env.STRIPE_WEBHOOK_SECRET,
     );
   } catch (err) {
     console.error("Webhook signature verification failed:", err.message);
@@ -109,7 +129,7 @@ export const stripeWebhook = async (req, res) => {
     const session = event.data.object;
     await prisma.payment.updateMany({
       where: { stripeSessionId: session.id },
-      data:  { status: "FAILED" },
+      data: { status: "FAILED" },
     });
   }
 
@@ -135,34 +155,46 @@ const handlePaymentSuccess = async (session) => {
 
     // 1. Cập nhật Payment → PAID
     const payment = await tx.payment.update({
-      where:  { courseClassId },
+      where: { courseClassId },
       data: {
-        status:               "PAID",
-        stripePaymentIntent:  session.payment_intent,
-        paidAt:               new Date(),
+        status: "PAID",
+        stripePaymentIntent: session.payment_intent,
+        paidAt: new Date(),
       },
     });
 
     // 2. CourseClass → UPCOMING (bắt đầu được học)
     await tx.courseClass.update({
       where: { id: courseClassId },
-      data:  { status: "UPCOMING" },
+      data: { status: "UPCOMING" },
     });
 
     // 3. Upsert TutorWallet — cộng vào heldAmount (chưa rút được)
     await tx.tutorWallet.upsert({
-      where:  { tutorProfileId },
+      where: { tutorProfileId },
       update: {
-        heldAmount:  { increment: payment.amount },
+        heldAmount: { increment: payment.amount },
         totalEarned: { increment: payment.amount },
       },
       create: {
         tutorProfileId,
-        heldAmount:  payment.amount,
+        heldAmount: payment.amount,
         totalEarned: payment.amount,
-        balance:     0,
+        balance: 0,
       },
     });
+    // Notify cả 2 (ngoài transaction vì SSE không cần atomic)
+    const course = await prisma.courseClass.findUnique({
+      where: { id: courseClassId },
+      include: { tutorProfile: { select: { userId: true } } },
+    });
+    if (course) {
+      await notifyPaymentSuccess(
+        course,
+        course.studentId,
+        course.tutorProfile.userId,
+      );
+    }
   });
 };
 
@@ -174,20 +206,35 @@ export const getPaymentByCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
 
-    const course = await prisma.courseClass.findUnique({ where: { id: courseId } });
-    if (!course) return res.status(404).json({ status: "error", message: "Không tìm thấy khóa học" });
+    const course = await prisma.courseClass.findUnique({
+      where: { id: courseId },
+    });
+    if (!course)
+      return res
+        .status(404)
+        .json({ status: "error", message: "Không tìm thấy khóa học" });
 
     // Chỉ student hoặc tutor liên quan
-    const tutorProfile = await prisma.tutorProfile.findUnique({ where: { userId: req.user.id } });
-    const isTutor   = tutorProfile && course.tutorProfileId === tutorProfile.id;
+    const tutorProfile = await prisma.tutorProfile.findUnique({
+      where: { userId: req.user.id },
+    });
+    const isTutor = tutorProfile && course.tutorProfileId === tutorProfile.id;
     const isStudent = course.studentId === req.user.id;
-    if (!isTutor && !isStudent) return res.status(403).json({ status: "error", message: "Không có quyền" });
+    if (!isTutor && !isStudent)
+      return res
+        .status(403)
+        .json({ status: "error", message: "Không có quyền" });
 
     const payment = await prisma.payment.findUnique({
       where: { courseClassId: courseId },
       select: {
-        id: true, amount: true, currency: true, status: true,
-        paidAt: true, releasedAt: true, createdAt: true,
+        id: true,
+        amount: true,
+        currency: true,
+        status: true,
+        paidAt: true,
+        releasedAt: true,
+        createdAt: true,
       },
     });
 
@@ -203,8 +250,13 @@ export const getPaymentByCourse = async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 export const getMyWallet = async (req, res) => {
   try {
-    const tutorProfile = await prisma.tutorProfile.findUnique({ where: { userId: req.user.id } });
-    if (!tutorProfile) return res.status(404).json({ status: "error", message: "Không tìm thấy hồ sơ gia sư" });
+    const tutorProfile = await prisma.tutorProfile.findUnique({
+      where: { userId: req.user.id },
+    });
+    if (!tutorProfile)
+      return res
+        .status(404)
+        .json({ status: "error", message: "Không tìm thấy hồ sơ gia sư" });
 
     const wallet = await prisma.tutorWallet.findUnique({
       where: { tutorProfileId: tutorProfile.id },
@@ -228,7 +280,12 @@ export const getMyWallet = async (req, res) => {
     res.status(200).json({
       status: "success",
       data: {
-        wallet: wallet ?? { balance: 0, heldAmount: 0, totalEarned: 0, withdrawals: [] },
+        wallet: wallet ?? {
+          balance: 0,
+          heldAmount: 0,
+          totalEarned: 0,
+          withdrawals: [],
+        },
         releasedPayments,
       },
     });
@@ -243,14 +300,16 @@ export const getMyWallet = async (req, res) => {
 // Được gọi tự động trong courseControllers khi cả 2 confirm end
 // ─────────────────────────────────────────────────────────────
 export const releasePayment = async (courseId) => {
-  const payment = await prisma.payment.findUnique({ where: { courseClassId: courseId } });
+  const payment = await prisma.payment.findUnique({
+    where: { courseClassId: courseId },
+  });
   if (!payment || payment.status !== "PAID") return;
 
   await prisma.$transaction(async (tx) => {
     // Payment → RELEASED
     await tx.payment.update({
       where: { id: payment.id },
-      data:  { status: "RELEASED", releasedAt: new Date() },
+      data: { status: "RELEASED", releasedAt: new Date() },
     });
 
     // Wallet: chuyển từ heldAmount → balance
@@ -258,7 +317,7 @@ export const releasePayment = async (courseId) => {
       where: { tutorProfileId: payment.tutorProfileId },
       data: {
         heldAmount: { decrement: payment.amount },
-        balance:    { increment: payment.amount },
+        balance: { increment: payment.amount },
       },
     });
   });
@@ -274,14 +333,24 @@ export const requestWithdrawal = async (req, res) => {
     const { amount } = req.body;
 
     if (!amount || parseFloat(amount) <= 0) {
-      return res.status(400).json({ status: "error", message: "Số tiền không hợp lệ" });
+      return res
+        .status(400)
+        .json({ status: "error", message: "Số tiền không hợp lệ" });
     }
 
-    const tutorProfile = await prisma.tutorProfile.findUnique({ where: { userId: req.user.id } });
-    if (!tutorProfile) return res.status(404).json({ status: "error", message: "Không tìm thấy hồ sơ gia sư" });
+    const tutorProfile = await prisma.tutorProfile.findUnique({
+      where: { userId: req.user.id },
+    });
+    if (!tutorProfile)
+      return res
+        .status(404)
+        .json({ status: "error", message: "Không tìm thấy hồ sơ gia sư" });
 
-    const wallet = await prisma.tutorWallet.findUnique({ where: { tutorProfileId: tutorProfile.id } });
-    if (!wallet) return res.status(400).json({ status: "error", message: "Chưa có ví" });
+    const wallet = await prisma.tutorWallet.findUnique({
+      where: { tutorProfileId: tutorProfile.id },
+    });
+    if (!wallet)
+      return res.status(400).json({ status: "error", message: "Chưa có ví" });
 
     const withdrawAmount = parseFloat(amount);
     if (withdrawAmount > wallet.balance) {
@@ -297,15 +366,15 @@ export const requestWithdrawal = async (req, res) => {
       const w = await tx.withdrawal.create({
         data: {
           walletId: wallet.id,
-          amount:   withdrawAmount,
-          status:   "PENDING",
+          amount: withdrawAmount,
+          status: "PENDING",
         },
       });
 
       // Trừ balance ngay
       await tx.tutorWallet.update({
         where: { id: wallet.id },
-        data:  { balance: { decrement: withdrawAmount } },
+        data: { balance: { decrement: withdrawAmount } },
       });
 
       return w;
@@ -313,7 +382,8 @@ export const requestWithdrawal = async (req, res) => {
 
     res.status(201).json({
       status: "success",
-      message: "Yêu cầu rút tiền đã được ghi nhận. Sẽ được xử lý trong 1-3 ngày làm việc.",
+      message:
+        "Yêu cầu rút tiền đã được ghi nhận. Sẽ được xử lý trong 1-3 ngày làm việc.",
       data: { withdrawal },
     });
   } catch (err) {
@@ -328,7 +398,10 @@ export const requestWithdrawal = async (req, res) => {
 export const verifyPayment = async (req, res) => {
   try {
     const { session_id } = req.query;
-    if (!session_id) return res.status(400).json({ status: "error", message: "Thiếu session_id" });
+    if (!session_id)
+      return res
+        .status(400)
+        .json({ status: "error", message: "Thiếu session_id" });
 
     const session = await stripe.checkout.sessions.retrieve(session_id);
 
@@ -341,22 +414,28 @@ export const verifyPayment = async (req, res) => {
       include: {
         courseClass: {
           select: {
-            id: true, subject: true, status: true,
-            totalSessions: true, totalPrice: true,
+            id: true,
+            subject: true,
+            status: true,
+            totalSessions: true,
+            totalPrice: true,
           },
         },
       },
     });
 
-    if (!payment) return res.status(404).json({ status: "error", message: "Không tìm thấy giao dịch" });
+    if (!payment)
+      return res
+        .status(404)
+        .json({ status: "error", message: "Không tìm thấy giao dịch" });
 
     res.status(200).json({
       status: "success",
       data: {
         paymentStatus: payment.status,
-        courseStatus:  payment.courseClass.status,
-        course:        payment.courseClass,
-        stripeStatus:  session.payment_status,
+        courseStatus: payment.courseClass.status,
+        course: payment.courseClass,
+        stripeStatus: session.payment_status,
       },
     });
   } catch (err) {

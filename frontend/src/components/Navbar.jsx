@@ -9,6 +9,7 @@ import { CgProfile } from "react-icons/cg";
 import { LuLogOut } from "react-icons/lu";
 import { useTranslation } from "react-i18next";
 import { MdLanguage } from "react-icons/md";
+import NotificationBell from "./NotificationBell.jsx";
 
 const Navbar = () => {
   const [modalMode, setModalMode] = useState("login");
@@ -121,7 +122,7 @@ const Navbar = () => {
 
       <div className="navbar-end gap-2">
         <ThemeSelector />
-
+        {user && <NotificationBell />}
         <div className="dropdown dropdown-center">
           <div
             tabIndex={0}
