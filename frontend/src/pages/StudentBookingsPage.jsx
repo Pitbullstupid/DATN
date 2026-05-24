@@ -30,7 +30,8 @@ const STATUS_BADGE = {
 };
 
 const BookingCard = ({ booking, onCancel, t, dateLocale }) => {
-  const { tutorProfile, subject, message, status, tutorNote, createdAt } = booking;
+  const { tutorProfile, subject, message, status, tutorNote, createdAt } =
+    booking;
   const badge = STATUS_BADGE[status] ?? "badge-ghost";
   const statusLabel = status
     ? t(`bookings:status.${status.toLowerCase()}`)
@@ -63,12 +64,16 @@ const BookingCard = ({ booking, onCancel, t, dateLocale }) => {
             </p>
             <p className="text-xs text-base-content/50">
               {tutorProfile?.subjects?.[0]
-                ? t("bookings:student.tutor_role", { subject: tutorProfile.subjects[0] })
+                ? t("bookings:student.tutor_role", {
+                    subject: tutorProfile.subjects[0],
+                  })
                 : t("tutors:card.tutor")}
             </p>
           </div>
         </div>
-        <span className={`badge ${badge} badge-sm font-medium`}>{statusLabel}</span>
+        <span className={`badge ${badge} badge-sm font-medium`}>
+          {statusLabel}
+        </span>
       </div>
 
       <div className="space-y-2 text-sm mb-4">
@@ -103,7 +108,9 @@ const BookingCard = ({ booking, onCancel, t, dateLocale }) => {
 
       {tutorNote && (
         <div className="bg-error/10 border border-error/20 rounded-xl px-4 py-3 text-sm text-error mb-3">
-          <span className="font-medium">{t("bookings:student.tutor_note")} </span>
+          <span className="font-medium">
+            {t("bookings:student.tutor_note")}{" "}
+          </span>
           {tutorNote}
         </div>
       )}
@@ -161,7 +168,11 @@ export default function StudentBookingsPage() {
   const fetch = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await getMyBookingsAsStudent({ status: activeTab, page, limit: 9 });
+      const res = await getMyBookingsAsStudent({
+        status: activeTab,
+        page,
+        limit: 9,
+      });
       setBookings(res.data?.data?.bookings || []);
       setPagination(res.data?.data?.pagination ?? { total: 0, totalPages: 1 });
     } catch (err) {
@@ -175,6 +186,12 @@ export default function StudentBookingsPage() {
     fetch();
   }, [fetch]);
 
+  // Thêm useEffect này vào trong StudentBookingsPage component
+  useEffect(() => {
+    const handler = () => fetch();
+    window.addEventListener("new-notification", handler);
+    return () => window.removeEventListener("new-notification", handler);
+  }, [fetch]);
   const handleTabChange = (val) => {
     setActiveTab(val);
     setPage(1);
@@ -232,7 +249,10 @@ export default function StudentBookingsPage() {
           <div className="flex flex-col items-center justify-center h-60 text-base-content/40 gap-3">
             <FaInbox size={44} className="opacity-25" />
             <p className="font-medium">{t("bookings:student.empty")}</p>
-            <button className="btn btn-sm btn-primary" onClick={() => navigate("/tutors")}>
+            <button
+              className="btn btn-sm btn-primary"
+              onClick={() => navigate("/tutors")}
+            >
               {t("bookings:student.find_tutor")}
             </button>
           </div>

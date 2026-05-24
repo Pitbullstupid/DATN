@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   FaClock,
@@ -418,6 +418,7 @@ export default function CourseDetailPage() {
   const [updatingSession, setUpdatingSession] = useState(null);
   const [confirmingSession, setConfirmingSession] = useState(null);
   const [requestingEnd, setRequestingEnd] = useState(false);
+  const location = useLocation();
 
   const fetchCourse = useCallback(async () => {
     try {
@@ -429,7 +430,19 @@ export default function CourseDetailPage() {
       setLoading(false);
     }
   }, [id]);
+  // Trong CourseDetailPage, thêm useEffect này:
+  useEffect(() => {
+    const handler = (e) => {
+      const notif = e.detail;
+      // Reload nếu notification liên quan đến course đang xem
+      if (notif?.courseId === id) {
+        fetchCourse();
+      }
+    };
 
+    window.addEventListener("new-notification", handler);
+    return () => window.removeEventListener("new-notification", handler);
+  }, [id, fetchCourse]);
   useEffect(() => {
     fetchCourse();
   }, [fetchCourse]);
@@ -615,7 +628,9 @@ export default function CourseDetailPage() {
                   </div>
                 )}
 
-              {["PENDING_PAYMENT", "UPCOMING", "ONGOING"].includes(course.status) && (
+              {["PENDING_PAYMENT", "UPCOMING", "ONGOING"].includes(
+                course.status,
+              ) && (
                 <button
                   className="btn btn-sm btn-error btn-outline gap-1.5"
                   onClick={handleCancel}

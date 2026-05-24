@@ -2,32 +2,36 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import axiosInstance from "../api/axiosInstance";
 import { useAuth } from "../context/AuthContext";
 
-
 // ─────────────────────────────────────────────────────────────
 // useNotifications — SSE + fetch + CRUD
 // ─────────────────────────────────────────────────────────────
 export const useNotifications = () => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount]     = useState(0);
-  const [loading, setLoading]             = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
   const eventSourceRef = useRef(null);
 
   // ── Fetch từ API ───────────────────────────────────────────
   const fetchNotifications = useCallback(async () => {
     try {
-      const res = await axiosInstance.get("/notifications", { params: { limit: 30 } });
+      const res = await axiosInstance.get("/notifications", {
+        params: { limit: 30 },
+      });
       setNotifications(res.data?.data?.notifications || []);
       setUnreadCount(res.data?.data?.unreadCount || 0);
-    } catch {}
-    finally { setLoading(false); }
+    } catch {
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   // ── SSE connection ─────────────────────────────────────────
   const connectSSE = useCallback(() => {
     if (!user?.id) return;
 
-    const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+    const token =
+      localStorage.getItem("token") || sessionStorage.getItem("token");
     if (!token) return;
 
     // Đóng kết nối cũ nếu có
@@ -51,6 +55,9 @@ export const useNotifications = () => {
           const newNotif = payload.data;
           setNotifications((prev) => [newNotif, ...prev]);
           setUnreadCount((c) => c + 1);
+          window.dispatchEvent(
+            new CustomEvent("new-notification", { detail: newNotif }),
+          );
         }
       } catch {}
     };
@@ -76,7 +83,7 @@ export const useNotifications = () => {
     try {
       await axiosInstance.patch(`/notifications/${id}/read`);
       setNotifications((prev) =>
-        prev.map((n) => n.id === id ? { ...n, isRead: true } : n)
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
       );
       setUnreadCount((c) => Math.max(0, c - 1));
     } catch {}

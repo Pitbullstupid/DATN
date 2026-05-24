@@ -53,134 +53,6 @@ const fmtDatetimeLocal = (iso) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-// const AcceptModal = ({ booking, onClose, onSuccess }) => {
-//   const { t } = useTranslation(["bookings", "toast"]);
-//   const [form, setForm] = useState({
-//     scheduledAt: fmtDatetimeLocal(new Date(Date.now() + 86400000).toISOString()),
-//     durationMin: 60,
-//     tutorNote: "",
-//   });
-//   const [loading, setLoading] = useState(false);
-//   const [error, setError] = useState("");
-
-//   const handleSubmit = async () => {
-//     if (!form.scheduledAt) {
-//       setError(t("toast:select_schedule"));
-//       return;
-//     }
-//     setLoading(true);
-//     try {
-//       await acceptBooking(booking.id, {
-//         scheduledAt: new Date(form.scheduledAt).toISOString(),
-//         durationMin: parseInt(form.durationMin),
-//         tutorNote: form.tutorNote || undefined,
-//       });
-//       toast.success(t("toast:accept_success"));
-//       onSuccess();
-//       onClose();
-//     } catch (err) {
-//       toast.error(err.message);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   return (
-//     <dialog open className="modal modal-bottom sm:modal-middle">
-//       <div className="modal-box w-full max-w-md p-0 rounded-2xl overflow-hidden">
-//         <div className="flex items-center justify-between px-6 py-4 border-b border-base-200">
-//           <h3 className="font-bold text-base-content text-lg">{t("bookings:modal.accept_title")}</h3>
-//           <button className="btn btn-ghost btn-sm btn-circle" onClick={onClose}>
-//             <FaXmark size={15} />
-//           </button>
-//         </div>
-
-//         <div className="px-6 pt-4 pb-2">
-//           <div className="flex items-center gap-3 p-3 bg-base-200/60 rounded-xl mb-4">
-//             <img
-//               src={
-//                 booking.student?.avatar ||
-//                 `https://ui-avatars.com/api/?name=${encodeURIComponent(booking.student?.name || "S")}&size=80&background=random`
-//               }
-//               alt={booking.student?.name}
-//               className="w-10 h-10 rounded-full object-cover"
-//             />
-//             <div>
-//               <p className="font-semibold text-sm text-base-content">{booking.student?.name}</p>
-//               <p className="text-xs text-base-content/50">{booking.subject}</p>
-//             </div>
-//           </div>
-
-//           <div className="space-y-4">
-//             <div>
-//               <label className="text-sm font-medium text-base-content mb-1 block">
-//                 {t("bookings:modal.scheduled")} <span className="text-error">*</span>
-//               </label>
-//               <input
-//                 type="datetime-local"
-//                 value={form.scheduledAt}
-//                 min={fmtDatetimeLocal(new Date().toISOString())}
-//                 onChange={(e) => {
-//                   setForm((f) => ({ ...f, scheduledAt: e.target.value }));
-//                   setError("");
-//                 }}
-//                 className="input input-bordered w-full focus:outline-none focus:border-primary"
-//               />
-//               {error && <p className="text-error text-xs mt-1">{error}</p>}
-//             </div>
-
-//             <div>
-//               <label className="text-sm font-medium text-base-content mb-1 block">
-//                 {t("bookings:modal.duration")}
-//               </label>
-//               <select
-//                 value={form.durationMin}
-//                 onChange={(e) => setForm((f) => ({ ...f, durationMin: e.target.value }))}
-//                 className="select select-bordered w-full focus:outline-none focus:border-primary"
-//               >
-//                 {[30, 45, 60, 90, 120, 150, 180].map((m) => (
-//                   <option key={m} value={m}>
-//                     {t("bookings:modal.minutes", { count: m })}
-//                   </option>
-//                 ))}
-//               </select>
-//             </div>
-
-//             <div>
-//               <label className="text-sm font-medium text-base-content mb-1 block">
-//                 {t("bookings:modal.note_student")}{" "}
-//                 <span className="text-base-content/40 font-normal">{t("bookings:modal.optional")}</span>
-//               </label>
-//               <textarea
-//                 rows={3}
-//                 placeholder={t("bookings:modal.note_placeholder")}
-//                 value={form.tutorNote}
-//                 onChange={(e) => setForm((f) => ({ ...f, tutorNote: e.target.value }))}
-//                 className="textarea textarea-bordered w-full resize-none focus:outline-none focus:border-primary text-sm"
-//               />
-//             </div>
-//           </div>
-//         </div>
-
-//         <div className="px-6 pb-6 pt-2 flex gap-2">
-//           <button className="btn btn-ghost flex-1" onClick={onClose} disabled={loading}>
-//             {t("bookings:modal.cancel")}
-//           </button>
-//           <button className="btn btn-success flex-1 gap-2" onClick={handleSubmit} disabled={loading}>
-//             {loading ? (
-//               <span className="loading loading-spinner loading-sm" />
-//             ) : (
-//               <FaCheck size={12} />
-//             )}
-//             {t("bookings:modal.confirm_accept")}
-//           </button>
-//         </div>
-//       </div>
-//       <div className="modal-backdrop" onClick={onClose} />
-//     </dialog>
-//   );
-// };
-
 const RejectModal = ({ booking, onClose, onSuccess }) => {
   const { t } = useTranslation(["bookings", "toast"]);
   const [tutorNote, setTutorNote] = useState("");
@@ -478,7 +350,17 @@ export default function TutorBookingsPage() {
       setLoading(false);
     }
   }, [activeTab, page]);
+  useEffect(() => {
+  const handler = (e) => {
+    const notif = e.detail;
+    if (notif?.bookingId) {
+      fetchBookings(); // hoặc tên hàm fetch tương ứng trong TutorBookingsPage
+    }
+  };
 
+  window.addEventListener("new-notification", handler);
+  return () => window.removeEventListener("new-notification", handler);
+}, [fetchBookings]);
   const fetchAll = useCallback(async () => {
     try {
       const res = await getMyBookingsAsTutor({ limit: 100 });

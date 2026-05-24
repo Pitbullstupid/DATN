@@ -18,11 +18,12 @@ import PaymentSuccessPage from "./components/PaymentSuccessPage.jsx";
 import PaymentCancelPage from "./components/PaymentCancelPage.jsx";
 import TutorWalletPage from "./components/TutorWalletPage.jsx";
 import NotificationsPage from "./pages/NotificationsPage.jsx";
+import AdminDashboard from "./admin/AdminDashboard.jsx";
 function App() {
   const { user } = useAuth();
   return (
     <div className="min-h-screen bg-base-100">
-      <Navbar />
+      {!location.pathname.startsWith("/admin") && <Navbar />}
       <main className="max-w-screen mx-auto">
         <Toaster
           position="top-center"
@@ -61,6 +62,7 @@ function App() {
           <Route path="/payment/cancel" element={<PaymentCancelPage />} />
           <Route path="/tutor/wallet" element={<TutorWalletPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/admin" element={<AdminDashboard />} />
         </Routes>
       </main>
     </div>
