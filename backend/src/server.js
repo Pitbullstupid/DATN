@@ -9,6 +9,7 @@ import courseRoutes from "./routes/courseRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js"; 
 import notificationRoutes from "./routes/notificationRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
 
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -46,7 +47,7 @@ app.use("/api/courses", courseRoutes);
 app.use("/api/payments", paymentRoutes); 
 app.use("/api/users", userRoutes);
 app.use("/api/notifications", notificationRoutes);
-
+app.use("/api/admin", adminRoutes);
 const server = app.listen(PORT, () => {
   console.log(`Backend đang chạy ở cổng http://localhost:${PORT}`);
 });

@@ -2,22 +2,18 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import axiosInstance from "../api/axiosInstance";
 import { useAuth } from "../context/AuthContext";
 
-// ─────────────────────────────────────────────────────────────
-// useNotifications — SSE + fetch + CRUD
-// ─────────────────────────────────────────────────────────────
 export const useNotifications = () => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [unreadCount, setUnreadCount]     = useState(0);
+  const [loading, setLoading]             = useState(true);
+  const [connected, setConnected]         = useState(false); // ← MỚI: trạng thái SSE
   const eventSourceRef = useRef(null);
 
   // ── Fetch từ API ───────────────────────────────────────────
   const fetchNotifications = useCallback(async () => {
     try {
-      const res = await axiosInstance.get("/notifications", {
-        params: { limit: 30 },
-      });
+      const res = await axiosInstance.get("/notifications", { params: { limit: 30 } });
       setNotifications(res.data?.data?.notifications || []);
       setUnreadCount(res.data?.data?.unreadCount || 0);
     } catch {
@@ -30,21 +26,15 @@ export const useNotifications = () => {
   const connectSSE = useCallback(() => {
     if (!user?.id) return;
 
-    const token =
-      localStorage.getItem("token") || sessionStorage.getItem("token");
+    const token = localStorage.getItem("token") || sessionStorage.getItem("token");
     if (!token) return;
 
-    // Đóng kết nối cũ nếu có
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-    }
+    if (eventSourceRef.current) eventSourceRef.current.close();
 
-    // SSE không hỗ trợ custom headers → truyền token qua query param
     const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
-    const url = `${baseUrl}/notifications/stream?token=${token}`;
-    const es = new EventSource(url);
+    const es = new EventSource(`${baseUrl}/notifications/stream?token=${token}`);
 
-    es.onopen = () => console.log("SSE connected");
+    es.onopen = () => setConnected(true);
 
     es.onmessage = (e) => {
       try {
@@ -52,19 +42,26 @@ export const useNotifications = () => {
         if (payload.event === "connected") return;
 
         if (payload.event === "notification") {
-          const newNotif = payload.data;
-          setNotifications((prev) => [newNotif, ...prev]);
+          // ── FIX: handle cả 2 format ──────────────────────
+          // notify()      → { event, data: { id, type, title, ... } }  (lưu DB)
+          // notifyAdmin() → { event, id, type, title, ... }             (không lưu DB)
+          const newNotif = payload.data ?? payload;
+
+          // Tránh duplicate (notifyAdmin push id dạng "admin_xxx")
+          setNotifications((prev) => {
+            if (prev.some((n) => n.id === newNotif.id)) return prev;
+            return [newNotif, ...prev];
+          });
           setUnreadCount((c) => c + 1);
-          window.dispatchEvent(
-            new CustomEvent("new-notification", { detail: newNotif }),
-          );
+
+          window.dispatchEvent(new CustomEvent("new-notification", { detail: newNotif }));
         }
       } catch {}
     };
 
     es.onerror = () => {
+      setConnected(false);
       es.close();
-      // Reconnect sau 5s
       setTimeout(connectSSE, 5000);
     };
 
@@ -80,36 +77,34 @@ export const useNotifications = () => {
 
   // ── Actions ────────────────────────────────────────────────
   const markAsRead = async (id) => {
-    try {
-      await axiosInstance.patch(`/notifications/${id}/read`);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
-      );
-      setUnreadCount((c) => Math.max(0, c - 1));
-    } catch {}
+    // notifyAdmin tạo id dạng "admin_xxx" — không lưu DB nên skip API call
+    if (!id.startsWith("admin_")) {
+      try { await axiosInstance.patch(`/notifications/${id}/read`); } catch {}
+    }
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+    setUnreadCount((c) => Math.max(0, c - 1));
   };
 
   const markAllAsRead = async () => {
-    try {
-      await axiosInstance.patch("/notifications/read-all");
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-      setUnreadCount(0);
-    } catch {}
+    try { await axiosInstance.patch("/notifications/read-all"); } catch {}
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    setUnreadCount(0);
   };
 
   const deleteNotification = async (id) => {
-    try {
-      await axiosInstance.delete(`/notifications/${id}`);
-      const target = notifications.find((n) => n.id === id);
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
-      if (target && !target.isRead) setUnreadCount((c) => Math.max(0, c - 1));
-    } catch {}
+    if (!id.startsWith("admin_")) {
+      try { await axiosInstance.delete(`/notifications/${id}`); } catch {}
+    }
+    const target = notifications.find((n) => n.id === id);
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    if (target && !target.isRead) setUnreadCount((c) => Math.max(0, c - 1));
   };
 
   return {
     notifications,
     unreadCount,
     loading,
+    connected,   // ← export thêm để NotificationBell admin hiện dot trạng thái
     markAsRead,
     markAllAsRead,
     deleteNotification,

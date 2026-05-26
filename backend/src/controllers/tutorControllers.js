@@ -1,4 +1,5 @@
 import { prisma } from "../config/db.js";
+import { notifyAdmin } from "../services/notificationService.js";
 
 // ─────────────────────────────────────────────────────────────
 // HELPER: lấy tutorProfile theo userId, ném lỗi nếu không có
@@ -20,7 +21,15 @@ export const getMyProfile = async (req, res) => {
     let profile = await prisma.tutorProfile.findUnique({
       where: { userId: req.user.id },
       include: {
-        user: { select: { id: true, name: true, email: true, avatar: true, gender: true } },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+            gender: true,
+          },
+        },
         educations: true,
         socialMedia: true,
         schedules: true,
@@ -31,7 +40,15 @@ export const getMyProfile = async (req, res) => {
       profile = await prisma.tutorProfile.create({
         data: { userId: req.user.id, status: "PENDING" },
         include: {
-          user: { select: { id: true, name: true, email: true, avatar: true, gender: true } },
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatar: true,
+              gender: true,
+            },
+          },
           educations: true,
           socialMedia: true,
           schedules: true,
@@ -58,7 +75,8 @@ export const updateStep1 = async (req, res) => {
     if (["REVIEWING", "APPROVED", "SUSPENDED"].includes(profile.status)) {
       return res.status(403).json({
         status: "error",
-        message: "Hồ sơ đang được duyệt hoặc đã được phê duyệt, không thể chỉnh sửa",
+        message:
+          "Hồ sơ đang được duyệt hoặc đã được phê duyệt, không thể chỉnh sửa",
       });
     }
 
@@ -108,7 +126,8 @@ export const updateStep2 = async (req, res) => {
     if (["REVIEWING", "APPROVED", "SUSPENDED"].includes(profile.status)) {
       return res.status(403).json({
         status: "error",
-        message: "Hồ sơ đang được duyệt hoặc đã được phê duyệt, không thể chỉnh sửa",
+        message:
+          "Hồ sơ đang được duyệt hoặc đã được phê duyệt, không thể chỉnh sửa",
       });
     }
 
@@ -151,7 +170,8 @@ export const updateStep3 = async (req, res) => {
     if (["REVIEWING", "APPROVED", "SUSPENDED"].includes(profile.status)) {
       return res.status(403).json({
         status: "error",
-        message: "Hồ sơ đang được duyệt hoặc đã được phê duyệt, không thể chỉnh sửa",
+        message:
+          "Hồ sơ đang được duyệt hoặc đã được phê duyệt, không thể chỉnh sửa",
       });
     }
 
@@ -187,7 +207,13 @@ export const updateSocialMedia = async (req, res) => {
     const socialMedia = await prisma.tutorSocialMedia.upsert({
       where: { tutorProfileId: profile.id },
       update: { facebook, twitter, youtube, instagram },
-      create: { tutorProfileId: profile.id, facebook, twitter, youtube, instagram },
+      create: {
+        tutorProfileId: profile.id,
+        facebook,
+        twitter,
+        youtube,
+        instagram,
+      },
     });
 
     res.status(200).json({
@@ -213,7 +239,8 @@ export const updateEducation = async (req, res) => {
     if (["REVIEWING", "APPROVED", "SUSPENDED"].includes(profile.status)) {
       return res.status(403).json({
         status: "error",
-        message: "Hồ sơ đang được duyệt hoặc đã được phê duyệt, không thể chỉnh sửa",
+        message:
+          "Hồ sơ đang được duyệt hoặc đã được phê duyệt, không thể chỉnh sửa",
       });
     }
 
@@ -250,7 +277,8 @@ export const deleteEducation = async (req, res) => {
     if (["REVIEWING", "APPROVED", "SUSPENDED"].includes(profile.status)) {
       return res.status(403).json({
         status: "error",
-        message: "Hồ sơ đang được duyệt hoặc đã được phê duyệt, không thể chỉnh sửa",
+        message:
+          "Hồ sơ đang được duyệt hoặc đã được phê duyệt, không thể chỉnh sửa",
       });
     }
 
@@ -259,12 +287,16 @@ export const deleteEducation = async (req, res) => {
       where: { id: eduId, tutorProfileId: profile.id },
     });
     if (!edu) {
-      return res.status(404).json({ status: "error", message: "Không tìm thấy bản ghi học vấn" });
+      return res
+        .status(404)
+        .json({ status: "error", message: "Không tìm thấy bản ghi học vấn" });
     }
 
     await prisma.tutorEducation.delete({ where: { id: eduId } });
 
-    res.status(200).json({ status: "success", message: "Xoá học vấn thành công" });
+    res
+      .status(200)
+      .json({ status: "success", message: "Xoá học vấn thành công" });
   } catch (err) {
     const status = err.status || 500;
     res.status(status).json({ status: "error", message: err.message });
@@ -283,21 +315,37 @@ export const submitProfile = async (req, res) => {
     });
 
     if (!profile) {
-      return res.status(404).json({ status: "error", message: "Không tìm thấy hồ sơ" });
+      return res
+        .status(404)
+        .json({ status: "error", message: "Không tìm thấy hồ sơ" });
     }
 
     if (profile.status === "REVIEWING") {
-      return res.status(400).json({ status: "error", message: "Hồ sơ đang chờ duyệt" });
+      return res
+        .status(400)
+        .json({ status: "error", message: "Hồ sơ đang chờ duyệt" });
     }
     if (profile.status === "APPROVED") {
-      return res.status(400).json({ status: "error", message: "Hồ sơ đã được phê duyệt" });
+      return res
+        .status(400)
+        .json({ status: "error", message: "Hồ sơ đã được phê duyệt" });
     }
 
     // Kiểm tra các trường bắt buộc trước khi submit
-    const requiredFields = ["bio", "phone", "subjects", "pricePerHour", "qualification"];
+    const requiredFields = [
+      "bio",
+      "phone",
+      "subjects",
+      "pricePerHour",
+      "qualification",
+    ];
     const missing = requiredFields.filter((f) => {
       const val = profile[f];
-      return val === null || val === undefined || (Array.isArray(val) && val.length === 0);
+      return (
+        val === null ||
+        val === undefined ||
+        (Array.isArray(val) && val.length === 0)
+      );
     });
 
     if (missing.length > 0) {
@@ -311,7 +359,12 @@ export const submitProfile = async (req, res) => {
       where: { userId: req.user.id },
       data: { status: "REVIEWING", adminNote: null },
     });
-
+    notifyAdmin({
+      type: "TUTOR_PROFILE_SUBMITTED",
+      title: "Hồ sơ gia sư mới",
+      body: `${req.user.name} vừa nộp hồ sơ chờ duyệt.`,
+      meta: { tutorProfileId: profile.id },
+    });
     res.status(200).json({
       status: "success",
       message: "Nộp hồ sơ thành công! Vui lòng chờ admin xét duyệt.",
@@ -430,7 +483,9 @@ export const getTutorById = async (req, res) => {
     });
 
     if (!profile || profile.status !== "APPROVED") {
-      return res.status(404).json({ status: "error", message: "Không tìm thấy gia sư" });
+      return res
+        .status(404)
+        .json({ status: "error", message: "Không tìm thấy gia sư" });
     }
 
     res.status(200).json({ status: "success", data: { profile } });

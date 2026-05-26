@@ -103,6 +103,8 @@ const login = async (req, res) => {
   let redirect = "/";
   if (user.role === "TUTOR") {
     redirect = "/tutor/dashboard";
+  } else if (user.role === "ADMIN") {
+    redirect = "/admin";
   }
 
   const token = generateToken(user.id, res);

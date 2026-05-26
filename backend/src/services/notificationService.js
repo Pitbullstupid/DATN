@@ -2,21 +2,28 @@ import { prisma } from "../config/db.js";
 
 // ─────────────────────────────────────────────────────────────
 // SSE CLIENT MANAGER
-// Lưu danh sách các client đang kết nối SSE
 // Map<userId, Response[]>
 // ─────────────────────────────────────────────────────────────
 const clients = new Map();
 
-export const addClient = (userId, res) => {
+// ── MỚI: Theo dõi riêng các admin đang online ─────────────────
+const adminIds = new Set();
+
+export const addClient = (userId, res, isAdmin = false) => {
   if (!clients.has(userId)) clients.set(userId, []);
   clients.get(userId).push(res);
+  if (isAdmin) adminIds.add(userId);
 };
 
 export const removeClient = (userId, res) => {
   if (!clients.has(userId)) return;
   const updated = clients.get(userId).filter((r) => r !== res);
-  if (updated.length === 0) clients.delete(userId);
-  else clients.set(userId, updated);
+  if (updated.length === 0) {
+    clients.delete(userId);
+    adminIds.delete(userId); // xoá khỏi admin set luôn
+  } else {
+    clients.set(userId, updated);
+  }
 };
 
 // Push event đến 1 user cụ thể
@@ -30,6 +37,13 @@ const pushToUser = (userId, data) => {
   });
 };
 
+// ── MỚI: Push event đến tất cả admin đang online ──────────────
+const pushToAdmins = (data) => {
+  for (const adminId of adminIds) {
+    pushToUser(adminId, data);
+  }
+};
+
 // ─────────────────────────────────────────────────────────────
 // NOTIFICATION FACTORY
 // Tạo notification trong DB + push SSE ngay lập tức
@@ -40,7 +54,6 @@ export const notify = async ({ userId, type, title, body, courseId, bookingId })
       data: { userId, type, title, body, courseId: courseId || null, bookingId: bookingId || null },
     });
 
-    // Push real-time nếu user đang online
     pushToUser(userId, {
       event: "notification",
       data:  notification,
@@ -52,16 +65,32 @@ export const notify = async ({ userId, type, title, body, courseId, bookingId })
   }
 };
 
-// Push nhiều notification cùng lúc (vd: thông báo cho cả 2 người)
+// Push nhiều notification cùng lúc
 export const notifyMany = async (notifications) => {
   return Promise.all(notifications.map((n) => notify(n)));
 };
 
+// ── MỚI: Gửi thông báo realtime cho admin (không lưu DB) ──────
+// Dùng cho các sự kiện hệ thống admin cần biết ngay:
+// hồ sơ mới, yêu cầu rút tiền, review thấp, payment mới...
+//
+// @param {{ type: string, title: string, body: string, meta?: object }} params
+export const notifyAdmin = ({ type, title, body, meta = {} }) => {
+  pushToAdmins({
+    event:     "notification",
+    id:        `admin_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    type,
+    title,
+    body,
+    ...meta,
+    createdAt: new Date().toISOString(),
+  });
+};
+
 // ─────────────────────────────────────────────────────────────
-// HELPER FUNCTIONS — gọi từ controllers
+// HELPER FUNCTIONS — giữ nguyên toàn bộ từ file cũ
 // ─────────────────────────────────────────────────────────────
 
-/** Khi student gửi booking */
 export const notifyBookingReceived = (booking, tutorUserId) =>
   notify({
     userId:    tutorUserId,
@@ -71,7 +100,6 @@ export const notifyBookingReceived = (booking, tutorUserId) =>
     bookingId: booking.id,
   });
 
-/** Khi tutor tạo lớp (accept booking) → student cần thanh toán */
 export const notifyPaymentRequired = (course, studentId) =>
   notify({
     userId:   studentId,
@@ -81,7 +109,6 @@ export const notifyPaymentRequired = (course, studentId) =>
     courseId: course.id,
   });
 
-/** Khi tutor reject booking */
 export const notifyBookingRejected = (booking, studentId, tutorNote) =>
   notify({
     userId:    studentId,
@@ -91,7 +118,6 @@ export const notifyBookingRejected = (booking, studentId, tutorNote) =>
     bookingId: booking.id,
   });
 
-/** Khi student huỷ booking */
 export const notifyBookingCancelled = (booking, tutorUserId) =>
   notify({
     userId:    tutorUserId,
@@ -101,7 +127,6 @@ export const notifyBookingCancelled = (booking, tutorUserId) =>
     bookingId: booking.id,
   });
 
-/** Khi thanh toán thành công — notify cả 2 */
 export const notifyPaymentSuccess = async (course, studentId, tutorUserId) =>
   notifyMany([
     {
@@ -120,7 +145,6 @@ export const notifyPaymentSuccess = async (course, studentId, tutorUserId) =>
     },
   ]);
 
-/** Khi lớp bắt đầu */
 export const notifyCourseStarted = (course, studentId) =>
   notify({
     userId:   studentId,
@@ -130,7 +154,6 @@ export const notifyCourseStarted = (course, studentId) =>
     courseId: course.id,
   });
 
-/** Khi tutor yêu cầu kết thúc */
 export const notifyEndCourseRequested = (course, studentId) =>
   notify({
     userId:   studentId,
@@ -140,7 +163,6 @@ export const notifyEndCourseRequested = (course, studentId) =>
     courseId: course.id,
   });
 
-/** Khi student xác nhận kết thúc → báo tutor đang chờ xử lý */
 export const notifyEndCourseWaiting = (course, tutorUserId) =>
   notify({
     userId:   tutorUserId,
@@ -150,7 +172,6 @@ export const notifyEndCourseWaiting = (course, tutorUserId) =>
     courseId: course.id,
   });
 
-/** Khi khóa học hoàn thành + tiền được giải phóng */
 export const notifyCourseCompleted = async (course, studentId, tutorUserId) =>
   notifyMany([
     {
@@ -169,7 +190,6 @@ export const notifyCourseCompleted = async (course, studentId, tutorUserId) =>
     },
   ]);
 
-/** Khi buổi học được cả 2 xác nhận */
 export const notifySessionConfirmed = (session, courseSubject, studentId, tutorUserId) =>
   notifyMany([
     {
@@ -188,7 +208,6 @@ export const notifySessionConfirmed = (session, courseSubject, studentId, tutorU
     },
   ]);
 
-/** Khi 1 bên xác nhận buổi học, chờ bên kia */
 export const notifySessionConfirmWait = (session, courseSubject, waitingUserId, confirmedByRole) =>
   notify({
     userId:   waitingUserId,
@@ -198,7 +217,6 @@ export const notifySessionConfirmWait = (session, courseSubject, waitingUserId, 
     courseId: session.courseClassId,
   });
 
-/** Khi lớp bị huỷ */
 export const notifyCourseCAncelled = async (course, studentId, tutorUserId, cancelledBy) =>
   notifyMany([
     {
@@ -206,8 +224,8 @@ export const notifyCourseCAncelled = async (course, studentId, tutorUserId, canc
       type:     "COURSE_CANCELLED",
       title:    "Lớp học đã bị huỷ",
       body:     `Lớp "${course.subject}" đã bị huỷ bởi ${cancelledBy === "TUTOR" ? "gia sư" : "học viên"}.${
-        course.payment?.status === "PAID" 
-          ? cancelledBy === "TUTOR" 
+        course.payment?.status === "PAID"
+          ? cancelledBy === "TUTOR"
             ? " Học phí sẽ được hoàn lại."
             : " Học phí sẽ được cộng cho gia sư."
           : ""

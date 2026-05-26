@@ -198,7 +198,7 @@ const TutorProfileEdit = () => {
 
   // ── Save handlers ────────────────────────────────────────
   const handleSaveStep = async () => {
-    if (isLocked) return;
+    if (isLocked) return false;
     setSaving(true);
     try {
       if (currentStep === 1) {
@@ -215,27 +215,34 @@ const TutorProfileEdit = () => {
         });
       } else if (currentStep === 3) {
         await updateStep3(step3);
+        const hasPendingEducation = Object.values(newEdu).some((value) => String(value).trim());
+        if (hasPendingEducation) {
+          const added = await handleAddEducation();
+          if (!added) return false;
+        }
       } else if (currentStep === 4) {
         await updateSocialMedia(social);
       }
       showToast("success", t("toast:save_success"));
+      return true;
     } catch (err) {
       showToast("error", err.message || t("toast:save_failed"));
+      return false;
     } finally {
       setSaving(false);
     }
   };
 
   const handleSaveAndNext = async () => {
-    await handleSaveStep();
-    if (currentStep < STEP_META.length) setCurrentStep((s) => s + 1);
+    const saved = await handleSaveStep();
+    if (saved && currentStep < STEP_META.length) setCurrentStep((s) => s + 1);
   };
 
   // ── Education handlers ───────────────────────────────────
   const handleAddEducation = async () => {
     if (!newEdu.universityName || !newEdu.fieldOfStudy || !newEdu.passingYear || !newEdu.result) {
       showToast("error", t("toast:education_fill_all"));
-      return;
+      return false;
     }
     setAddingEdu(true);
     try {
@@ -243,8 +250,10 @@ const TutorProfileEdit = () => {
       setEducations((prev) => [...prev, data.data.education]);
       setNewEdu({ universityName: "", fieldOfStudy: "", passingYear: "", result: "" });
       showToast("success", t("toast:education_added"));
+      return true;
     } catch (err) {
       showToast("error", err.message || t("toast:education_add_failed"));
+      return false;
     } finally {
       setAddingEdu(false);
     }
@@ -669,6 +678,7 @@ const TutorProfileEdit = () => {
                               </div>
                               {!isLocked && (
                                 <button
+                                  type="button"
                                   onClick={() => handleDeleteEducation(edu.id)}
                                   className="btn btn-ghost btn-xs text-error hover:bg-error/10"
                                 >
@@ -721,8 +731,9 @@ const TutorProfileEdit = () => {
                             />
                           </div>
                           <button
+                            type="button"
                             onClick={handleAddEducation}
-                            disabled={addingEdu}
+                            disabled={saving || addingEdu}
                             className="btn btn-outline btn-primary btn-sm gap-2"
                           >
                             {addingEdu ? (
@@ -776,6 +787,7 @@ const TutorProfileEdit = () => {
                             </p>
                             <div className="flex flex-wrap gap-2 mt-3">
                               <button
+                                type="button"
                                 onClick={handleSaveStep}
                                 disabled={saving}
                                 className="btn btn-outline btn-success btn-sm gap-2"
@@ -786,6 +798,7 @@ const TutorProfileEdit = () => {
                                 {t("profile:submit.save")}
                               </button>
                               <button
+                                type="button"
                                 onClick={handleSubmit}
                                 disabled={submitLoading}
                                 className="btn btn-success btn-sm gap-2"
@@ -810,6 +823,7 @@ const TutorProfileEdit = () => {
           {!loading && (
             <div className="px-6 py-4 border-t border-base-200 flex items-center justify-between gap-3 bg-base-200/30">
               <button
+                type="button"
                 onClick={() => navigate("/tutor/dashboard")}
                 className="btn btn-ghost btn-sm gap-1 text-base-content/50"
               >
@@ -820,6 +834,7 @@ const TutorProfileEdit = () => {
               <div className="flex items-center gap-2">
                 {currentStep > 1 && (
                   <button
+                    type="button"
                     onClick={() => setCurrentStep((s) => s - 1)}
                     className="btn btn-outline btn-sm gap-1"
                   >
@@ -829,8 +844,9 @@ const TutorProfileEdit = () => {
 
                 {currentStep < STEP_META.length ? (
                   <button
+                    type="button"
                     onClick={handleSaveAndNext}
-                    disabled={saving || isLocked}
+                    disabled={saving || addingEdu || isLocked}
                     className="btn btn-primary btn-sm gap-1"
                   >
                     {saving
@@ -844,6 +860,7 @@ const TutorProfileEdit = () => {
                 ) : (
                   currentStep === STEP_META.length && isLocked && (
                     <button
+                      type="button"
                       onClick={() => navigate("/tutor/dashboard")}
                       className="btn btn-primary btn-sm"
                     >

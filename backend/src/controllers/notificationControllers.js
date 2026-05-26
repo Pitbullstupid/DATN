@@ -13,13 +13,13 @@ export const sseStream = (req, res) => {
   res.setHeader("X-Accel-Buffering", "no"); // tắt nginx buffering
   res.flushHeaders();
 
-  const userId = req.user.id;
+  const { id: userId, role } = req.user;
 
   // Gửi ping ngay khi connect để client biết stream đã sẵn sàng
   res.write(`data: ${JSON.stringify({ event: "connected", userId })}\n\n`);
 
-  // Đăng ký client
-  addClient(userId, res);
+  // Đăng ký client — truyền isAdmin để sseManager theo dõi riêng
+  addClient(userId, res, role === "ADMIN");
 
   // Giữ kết nối bằng heartbeat mỗi 30s
   const heartbeat = setInterval(() => {
@@ -74,7 +74,6 @@ export const getNotifications = async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────
 // PATCH /notifications/:id/read
-// Đánh dấu 1 thông báo đã đọc
 // ─────────────────────────────────────────────────────────────
 export const markAsRead = async (req, res) => {
   try {
@@ -98,7 +97,6 @@ export const markAsRead = async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────
 // PATCH /notifications/read-all
-// Đánh dấu tất cả đã đọc
 // ─────────────────────────────────────────────────────────────
 export const markAllAsRead = async (req, res) => {
   try {
@@ -114,7 +112,6 @@ export const markAllAsRead = async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────
 // DELETE /notifications/:id
-// Xoá 1 thông báo
 // ─────────────────────────────────────────────────────────────
 export const deleteNotification = async (req, res) => {
   try {
