@@ -359,7 +359,7 @@ export const submitProfile = async (req, res) => {
       where: { userId: req.user.id },
       data: { status: "REVIEWING", adminNote: null },
     });
-    notifyAdmin({
+    await notifyAdmin({
       type: "TUTOR_PROFILE_SUBMITTED",
       title: "Hồ sơ gia sư mới",
       body: `${req.user.name} vừa nộp hồ sơ chờ duyệt.`,

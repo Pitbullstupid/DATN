@@ -324,6 +324,14 @@ export default function CourseListPage() {
     setActiveTab(val);
     setPage(1);
   };
+  useEffect(() => {
+    const handler = () => {
+      fetchCourses();
+    };
+
+    window.addEventListener("new-notification", handler);
+    return () => window.removeEventListener("new-notification", handler);
+  }, [fetchCourses]);
 
   return (
     <div className="min-h-screen bg-base-200">

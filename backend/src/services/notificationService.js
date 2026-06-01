@@ -6,13 +6,9 @@ import { prisma } from "../config/db.js";
 // ─────────────────────────────────────────────────────────────
 const clients = new Map();
 
-// ── MỚI: Theo dõi riêng các admin đang online ─────────────────
-const adminIds = new Set();
-
-export const addClient = (userId, res, isAdmin = false) => {
+export const addClient = (userId, res) => {
   if (!clients.has(userId)) clients.set(userId, []);
   clients.get(userId).push(res);
-  if (isAdmin) adminIds.add(userId);
 };
 
 export const removeClient = (userId, res) => {
@@ -20,7 +16,6 @@ export const removeClient = (userId, res) => {
   const updated = clients.get(userId).filter((r) => r !== res);
   if (updated.length === 0) {
     clients.delete(userId);
-    adminIds.delete(userId); // xoá khỏi admin set luôn
   } else {
     clients.set(userId, updated);
   }
@@ -35,13 +30,6 @@ const pushToUser = (userId, data) => {
     try { res.write(payload); }
     catch { /* client đã disconnect */ }
   });
-};
-
-// ── MỚI: Push event đến tất cả admin đang online ──────────────
-const pushToAdmins = (data) => {
-  for (const adminId of adminIds) {
-    pushToUser(adminId, data);
-  }
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -70,21 +58,29 @@ export const notifyMany = async (notifications) => {
   return Promise.all(notifications.map((n) => notify(n)));
 };
 
-// ── MỚI: Gửi thông báo realtime cho admin (không lưu DB) ──────
-// Dùng cho các sự kiện hệ thống admin cần biết ngay:
-// hồ sơ mới, yêu cầu rút tiền, review thấp, payment mới...
-//
+// Tạo notification trong DB cho tất cả admin + push SSE nếu admin đang online.
 // @param {{ type: string, title: string, body: string, meta?: object }} params
-export const notifyAdmin = ({ type, title, body, meta = {} }) => {
-  pushToAdmins({
-    event:     "notification",
-    id:        `admin_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-    type,
-    title,
-    body,
-    ...meta,
-    createdAt: new Date().toISOString(),
-  });
+export const notifyAdmin = async ({ type, title, body, meta = {} }) => {
+  try {
+    const admins = await prisma.user.findMany({
+      where:  { role: "ADMIN" },
+      select: { id: true },
+    });
+
+    return notifyMany(
+      admins.map((admin) => ({
+        userId:    admin.id,
+        type,
+        title,
+        body,
+        courseId:  meta.courseId,
+        bookingId: meta.bookingId,
+      }))
+    );
+  } catch (err) {
+    console.error("notifyAdmin error:", err.message);
+    return [];
+  }
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -144,6 +140,62 @@ export const notifyPaymentSuccess = async (course, studentId, tutorUserId) =>
       courseId: course.id,
     },
   ]);
+
+export const notifyWithdrawalRequested = (withdrawal, tutorName) =>
+  notifyAdmin({
+    type:  "WITHDRAWAL_REQUESTED",
+    title: "Yêu cầu rút tiền mới",
+    body:  `${tutorName || "Gia sư"} vừa yêu cầu rút $${Number(withdrawal.amount).toFixed(2)}.`,
+  });
+
+export const notifyWithdrawalCompleted = async (withdrawal, tutorUserId, tutorName) => {
+  await notifyAdmin({
+    type:  "WITHDRAWAL_COMPLETED",
+    title: "Rút tiền đã hoàn tất",
+    body:  `Yêu cầu rút $${Number(withdrawal.amount).toFixed(2)} của ${tutorName || "gia sư"} đã hoàn tất.`,
+  });
+
+  return notify({
+    userId: tutorUserId,
+    type:   "WITHDRAWAL_COMPLETED",
+    title:  "Tiền đã được chuyển",
+    body:   `Admin đã chuyển thành công $${Number(withdrawal.amount).toFixed(2)} cho bạn.`,
+  });
+};
+
+export const notifyCourseActivated = async (course, tutorUserId, studentName) => {
+  await notifyAdmin({
+    type:  "COURSE_ACTIVATED",
+    title: "Lớp học mới đã được kích hoạt",
+    body:  `${studentName || "Học viên"} đã thanh toán lớp "${course.subject}".`,
+    meta:  { courseId: course.id },
+  });
+
+  return notify({
+    userId:   tutorUserId,
+    type:     "COURSE_ACTIVATED",
+    title:    "Lớp học đã được kích hoạt",
+    body:     `Học viên đã thanh toán lớp "${course.subject}". Bạn có thể bắt đầu chuẩn bị lịch học.`,
+    courseId: course.id,
+  });
+};
+
+export const notifyReviewCreated = async (review, course, tutorUserId, studentName) => {
+  await notifyAdmin({
+    type:  "REVIEW_CREATED",
+    title: "Đánh giá mới",
+    body:  `${studentName || "Học viên"} vừa đánh giá ${review.rating}/5 cho lớp "${course.subject}".`,
+    meta:  { courseId: course.id },
+  });
+
+  return notify({
+    userId:   tutorUserId,
+    type:     "REVIEW_CREATED",
+    title:    "Bạn có đánh giá mới",
+    body:     `${studentName || "Học viên"} vừa đánh giá ${review.rating}/5 cho lớp "${course.subject}".`,
+    courseId: course.id,
+  });
+};
 
 export const notifyCourseStarted = (course, studentId) =>
   notify({

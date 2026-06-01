@@ -1,6 +1,10 @@
 import Stripe from "stripe";
 import { prisma } from "../config/db.js";
-import { notifyPaymentSuccess } from "../services/notificationService.js";
+import {
+  notifyCourseActivated,
+  notifyPaymentSuccess,
+  notifyWithdrawalRequested,
+} from "../services/notificationService.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -186,13 +190,21 @@ const handlePaymentSuccess = async (session) => {
     // Notify cả 2 (ngoài transaction vì SSE không cần atomic)
     const course = await prisma.courseClass.findUnique({
       where: { id: courseClassId },
-      include: { tutorProfile: { select: { userId: true } } },
+      include: {
+        student: { select: { name: true } },
+        tutorProfile: { select: { userId: true } },
+      },
     });
     if (course) {
       await notifyPaymentSuccess(
         course,
         course.studentId,
         course.tutorProfile.userId,
+      );
+      await notifyCourseActivated(
+        course,
+        course.tutorProfile.userId,
+        course.student?.name,
       );
     }
   });
@@ -252,6 +264,7 @@ export const getMyWallet = async (req, res) => {
   try {
     const tutorProfile = await prisma.tutorProfile.findUnique({
       where: { userId: req.user.id },
+      include: { user: { select: { name: true } } },
     });
     if (!tutorProfile)
       return res
@@ -340,6 +353,7 @@ export const requestWithdrawal = async (req, res) => {
 
     const tutorProfile = await prisma.tutorProfile.findUnique({
       where: { userId: req.user.id },
+      include: { user: { select: { name: true } } },
     });
     if (!tutorProfile)
       return res
@@ -379,6 +393,8 @@ export const requestWithdrawal = async (req, res) => {
 
       return w;
     });
+
+    await notifyWithdrawalRequested(withdrawal, tutorProfile.user?.name);
 
     res.status(201).json({
       status: "success",

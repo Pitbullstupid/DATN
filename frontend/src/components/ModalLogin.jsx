@@ -37,38 +37,64 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Kiểm tra password match khi signup
     if (mode === "signup" && form.password !== form.confirmPassword) {
       toast.error(t("toast:password_mismatch"));
       return;
     }
 
     setLoading(true);
+
     try {
       if (mode === "login") {
-        await toast.promise(
-          login({ email: form.email, password: form.password }, rememberMe),
-          {
-            loading: t("toast:logging_in"),
-            success: null,
-            error: (err) => err.response?.data?.message || t("toast:login_failed"),
-          },
-        );
+        // Xử lý Login
+        const toastId = toast.loading(t("toast:logging_in"));
+
+        try {
+          const response = await login(
+            { email: form.email, password: form.password },
+            rememberMe
+          );
+
+          // Lấy message từ API response (hoặc fallback i18n)
+          const successMessage = response?.message || t("toast:login_success");
+          toast.success(successMessage, { id: toastId });
+          closeModal();
+        } catch (error) {
+          // Lấy message từ API backend
+          const errorMessage =
+            error.response?.data?.message || 
+            error.message || 
+            t("toast:login_failed");
+          toast.error(errorMessage, { id: toastId });
+          console.error("Login error:", error);
+        }
       } else {
-        await toast.promise(
-          register({
+        // Xử lý Register
+        const toastId = toast.loading(t("toast:creating_account"));
+
+        try {
+          const response = await register({
             name: form.name,
             email: form.email,
             password: form.password,
             role: form.role,
-          }),
-          {
-            loading: t("toast:creating_account"),
-            success: null,
-            error: (err) => err.response?.data?.message || t("toast:register_failed"),
-          },
-        );
+          });
+
+          // Lấy message từ API response (hoặc fallback i18n)
+          const successMessage = response?.message || t("toast:register_success");
+          toast.success(successMessage, { id: toastId });
+          closeModal();
+        } catch (error) {
+          // Lấy message từ API backend
+          const errorMessage =
+            error.response?.data?.message || 
+            error.message || 
+            t("toast:register_failed");
+          toast.error(errorMessage, { id: toastId });
+          console.error("Register error:", error);
+        }
       }
-      document.getElementById("modal_login").close();
     } finally {
       setLoading(false);
     }
@@ -89,7 +115,9 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
             </div>
 
             <h2 className="text-2xl font-bold mb-6">
-              {mode === "login" ? t("common:modal_login.title_login") : t("common:modal_login.title_signup")}
+              {mode === "login"
+                ? t("common:modal_login.title_login")
+                : t("common:modal_login.title_signup")}
             </h2>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -104,6 +132,7 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
                       className="input input-bordered w-full"
                       value={form.name}
                       onChange={handleChange}
+                      required
                     />
                   </label>
 
@@ -129,6 +158,7 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
                   className="input input-bordered w-full"
                   value={form.email}
                   onChange={handleChange}
+                  required
                 />
               </label>
 
@@ -141,6 +171,7 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
                   className="input input-bordered w-full"
                   value={form.password}
                   onChange={handleChange}
+                  required
                 />
               </label>
 
@@ -154,6 +185,7 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
                     className="input input-bordered w-full"
                     value={form.confirmPassword}
                     onChange={handleChange}
+                    required
                   />
                 </label>
               )}
@@ -191,7 +223,9 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
               <div className="flex justify-between text-sm">
                 {mode === "login" ? (
                   <>
-                    <a className="link link-error">{t("login.btn_forgot_password")}</a>
+                    <a className="link link-error">
+                      {t("login.btn_forgot_password")}
+                    </a>
                     <button
                       type="button"
                       className="link link-info"
@@ -228,7 +262,7 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
 
         {/* Nút đóng */}
         <button
-          className="btn btn-sm  btn-circle btn-base absolute right-3 top-3"
+          className="btn btn-sm btn-circle btn-base absolute right-3 top-3"
           onClick={closeModal}
         >
           ✕

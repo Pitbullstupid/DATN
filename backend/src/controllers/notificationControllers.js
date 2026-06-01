@@ -18,8 +18,8 @@ export const sseStream = (req, res) => {
   // Gửi ping ngay khi connect để client biết stream đã sẵn sàng
   res.write(`data: ${JSON.stringify({ event: "connected", userId })}\n\n`);
 
-  // Đăng ký client — truyền isAdmin để sseManager theo dõi riêng
-  addClient(userId, res, role === "ADMIN");
+  // Đăng ký client cho user hiện tại
+  addClient(userId, res);
 
   // Giữ kết nối bằng heartbeat mỗi 30s
   const heartbeat = setInterval(() => {

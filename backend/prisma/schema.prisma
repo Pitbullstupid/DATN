@@ -80,6 +80,13 @@ enum WithdrawStatus {
   FAILED
 }
 enum NotificationType {
+  // Admin
+  TUTOR_PROFILE_SUBMITTED // admin: tutor submitted profile for review
+  WITHDRAWAL_REQUESTED    // admin: tutor requested withdrawal
+  WITHDRAWAL_COMPLETED    // admin/tutor: withdrawal completed
+  COURSE_ACTIVATED        // admin/tutor: course activated after payment
+  REVIEW_CREATED          // admin/tutor: new course review
+
   // Booking
   BOOKING_RECEIVED      // tutor nhận booking mới
   BOOKING_ACCEPTED      // student: booking được accept

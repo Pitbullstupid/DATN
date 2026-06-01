@@ -35,44 +35,72 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = async (formData, rememberMe = false) => {
-    const { data } = await authApi.login(formData);
-    const { user, token, redirect } = data.data;
+    try {
+      const { data } = await authApi.login(formData);
+      const { user, token, redirect } = data.data;
 
-    if (rememberMe) {
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-    } else {
-      sessionStorage.setItem("token", token);
-      sessionStorage.setItem("user", JSON.stringify(user));
+      if (rememberMe) {
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(user));
+      } else {
+        sessionStorage.setItem("token", token);
+        sessionStorage.setItem("user", JSON.stringify(user));
+      }
+
+      setUser(user);
+      navigate(redirect); // điều hướng theo trạng thái tutor
+      
+      // Return toàn bộ response để component có thể lấy message
+      return {
+        user,
+        token,
+        redirect,
+        message: data.message // Trả về message từ API
+      };
+    } catch (error) {
+      // Re-throw error để component catch và xử lý
+      throw error;
     }
-
-    setUser(user);
-    toast.success(data.message);
-    navigate(redirect); // điều hướng theo trạng thái tutor
-    return user;
   };
 
   const register = async (formData) => {
-    const { data } = await authApi.register(formData);
-    const { user, token, redirect } = data.data;
+    try {
+      const { data } = await authApi.register(formData);
+      const { user, token, redirect } = data.data;
 
-    localStorage.setItem("token", token);
-    localStorage.setItem("user", JSON.stringify(user));
-    setUser(user);
-    toast.success(data.message);
-    navigate(redirect); // STUDENT → /dashboard, TUTOR → /tutor/profile/setup
-    return user;
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+      setUser(user);
+      navigate(redirect); // STUDENT → /dashboard, TUTOR → /tutor/profile/setup
+      
+      // Return toàn bộ response để component có thể lấy message
+      return {
+        user,
+        token,
+        redirect,
+        message: data.message // Trả về message từ API
+      };
+    } catch (error) {
+      // Re-throw error để component catch và xử lý
+      throw error;
+    }
   };
 
   const logout = async () => {
-    const { data } = await authApi.logout();
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    sessionStorage.removeItem("token");
-    sessionStorage.removeItem("user");
-    setUser(null);
-    toast.success(data.message);
-    navigate("/"); // về trang chủ sau khi logout
+    try {
+      const { data } = await authApi.logout();
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      sessionStorage.removeItem("token");
+      sessionStorage.removeItem("user");
+      setUser(null);
+      toast.success(data.message);
+      navigate("/"); // về trang chủ sau khi logout
+      return data;
+    } catch (error) {
+      console.error("Logout failed:", error);
+      throw error;
+    }
   };
 
   return (

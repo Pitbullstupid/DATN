@@ -34,7 +34,10 @@ export const useNotifications = () => {
     const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
     const es = new EventSource(`${baseUrl}/notifications/stream?token=${token}`);
 
-    es.onopen = () => setConnected(true);
+    es.onopen = () => {
+      setConnected(true);
+      fetchNotifications();
+    };
 
     es.onmessage = (e) => {
       try {
@@ -42,12 +45,9 @@ export const useNotifications = () => {
         if (payload.event === "connected") return;
 
         if (payload.event === "notification") {
-          // ── FIX: handle cả 2 format ──────────────────────
-          // notify()      → { event, data: { id, type, title, ... } }  (lưu DB)
-          // notifyAdmin() → { event, id, type, title, ... }             (không lưu DB)
+          // Handle current DB-backed payload and older direct SSE payloads.
           const newNotif = payload.data ?? payload;
 
-          // Tránh duplicate (notifyAdmin push id dạng "admin_xxx")
           setNotifications((prev) => {
             if (prev.some((n) => n.id === newNotif.id)) return prev;
             return [newNotif, ...prev];
@@ -66,7 +66,7 @@ export const useNotifications = () => {
     };
 
     eventSourceRef.current = es;
-  }, [user?.id]);
+  }, [user?.id, fetchNotifications]);
 
   useEffect(() => {
     if (!user) return;
@@ -77,7 +77,7 @@ export const useNotifications = () => {
 
   // ── Actions ────────────────────────────────────────────────
   const markAsRead = async (id) => {
-    // notifyAdmin tạo id dạng "admin_xxx" — không lưu DB nên skip API call
+    // Older sessions may still contain direct SSE admin notifications with admin_* ids.
     if (!id.startsWith("admin_")) {
       try { await axiosInstance.patch(`/notifications/${id}/read`); } catch {}
     }

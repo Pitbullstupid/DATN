@@ -2,13 +2,18 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FaBell, FaCheck, FaTrash, FaArrowLeft,
-  FaBookOpen, FaCreditCard, FaCircleInfo,
+  FaBookOpen, FaCreditCard, FaCircleInfo,FaStar 
 } from "react-icons/fa6";
 import { FaCalendarAlt } from "react-icons/fa";
 import { useNotifications } from "../hook/useNotifications";
 
 // ─── Icon + color theo loại ───────────────────────────────────
 const NOTIF_CONFIG = {
+  TUTOR_PROFILE_SUBMITTED: { icon: FaCircleInfo,  color: "text-info",      bg: "bg-info/10"      },
+  WITHDRAWAL_REQUESTED: { icon: FaCreditCard,  color: "text-warning",   bg: "bg-warning/10"   },
+  WITHDRAWAL_COMPLETED: { icon: FaCreditCard,  color: "text-success",   bg: "bg-success/10"   },
+  COURSE_ACTIVATED:     { icon: FaCalendarAlt, color: "text-success",   bg: "bg-success/10"   },
+  REVIEW_CREATED:       { icon: FaStar,        color: "text-warning",   bg: "bg-warning/10"   },
   BOOKING_RECEIVED:    { icon: FaBookOpen,    color: "text-primary",   bg: "bg-primary/10"   },
   BOOKING_ACCEPTED:    { icon: FaCheck,       color: "text-success",   bg: "bg-success/10"   },
   BOOKING_REJECTED:    { icon: FaCircleInfo,  color: "text-error",     bg: "bg-error/10"     },
@@ -50,8 +55,10 @@ const FILTER_TABS = [
   { label: "Chưa đọc",     value: "unread" },
   { label: "Booking",      value: "BOOKING" },
   { label: "Thanh toán",   value: "PAYMENT" },
+  { label: "Rút tiền",     value: "WITHDRAWAL" },
   { label: "Khóa học",     value: "COURSE"  },
   { label: "Buổi học",     value: "SESSION" },
+  { label: "Đánh giá",     value: "REVIEW" },
 ];
 
 const Skeleton = () => (

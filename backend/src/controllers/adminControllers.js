@@ -1,5 +1,8 @@
 import { prisma } from "../config/db.js";
-import { notify } from "../services/notificationService.js";
+import {
+  notify,
+  notifyWithdrawalCompleted,
+} from "../services/notificationService.js";
 // Tái sử dụng releasePayment từ paymentControllers thay vì viết lại
 import { releasePayment } from "./paymentControllers.js";
 
@@ -549,7 +552,22 @@ export const processWithdrawal = async (req, res) => {
 
     const withdrawal = await prisma.withdrawal.findUnique({
       where: { id: req.params.id },
-      select: { id: true, status: true, amount: true, walletId: true },
+      select: {
+        id: true,
+        status: true,
+        amount: true,
+        walletId: true,
+        wallet: {
+          select: {
+            tutorProfile: {
+              select: {
+                userId: true,
+                user: { select: { name: true } },
+              },
+            },
+          },
+        },
+      },
     });
     if (!withdrawal) {
       return res.status(404).json({ status: "error", message: "Không tìm thấy yêu cầu rút tiền" });
@@ -572,6 +590,14 @@ export const processWithdrawal = async (req, res) => {
       ]);
     } else {
       await prisma.withdrawal.update({ where: { id: req.params.id }, data });
+    }
+
+    if (status === "COMPLETED") {
+      await notifyWithdrawalCompleted(
+        withdrawal,
+        withdrawal.wallet.tutorProfile.userId,
+        withdrawal.wallet.tutorProfile.user?.name,
+      );
     }
 
     res.status(200).json({ status: "success", message: `Đã cập nhật trạng thái: ${status}` });

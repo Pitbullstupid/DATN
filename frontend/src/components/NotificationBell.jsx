@@ -6,6 +6,11 @@ import { useNotifications } from "../hook/useNotifications";
 
 // ─── Icon theo loại notification ─────────────────────────────
 const NOTIF_ICON = {
+  TUTOR_PROFILE_SUBMITTED: <FaCircleInfo  className="text-info"      />,
+  WITHDRAWAL_REQUESTED: <FaCreditCard  className="text-warning"   />,
+  WITHDRAWAL_COMPLETED: <FaCreditCard  className="text-success"   />,
+  COURSE_ACTIVATED:     <FaCalendarAlt className="text-success"   />,
+  REVIEW_CREATED:       <FaStar        className="text-warning"   />,
   BOOKING_RECEIVED:    <FaBookOpen    className="text-primary"   />,
   BOOKING_ACCEPTED:    <FaCheck       className="text-success"   />,
   BOOKING_REJECTED:    <FaCircleInfo  className="text-error"     />,

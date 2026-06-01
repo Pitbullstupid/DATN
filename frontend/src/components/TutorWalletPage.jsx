@@ -65,6 +65,7 @@ const WithdrawModal = ({ balance, onClose, onSuccess }) => {
     }
   };
 
+
   return (
     <dialog open className="modal modal-bottom sm:modal-middle">
       <div className="modal-box w-full max-w-md p-0 rounded-2xl overflow-hidden">

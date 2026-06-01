@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   FiMail,
@@ -187,22 +187,20 @@ const TutorDashboard = () => {
   const [rejectTarget, setRejectTarget] = useState(null);
 
   // ── Fetch profile ──────────────────────────────────────────
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const { data } = await getMyProfile();
-        if (alive) setProfile(data?.data?.profile ?? null);
-      } catch {
-        if (alive) setError(t("dashboard:load_error"));
-      } finally {
-        if (alive) setLoadingProfile(false);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
+  const fetchProfile = useCallback(async () => {
+    try {
+      setLoadingProfile(true);
+      const { data } = await getMyProfile();
+      setProfile(data?.data?.profile ?? null);
+    } catch {
+      setError(t("dashboard:load_error"));
+    } finally {
+      setLoadingProfile(false);
+    }
   }, [t]);
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
   // ── Fetch bookings ─────────────────────────────────────────
   const fetchBookings = async () => {
@@ -234,6 +232,7 @@ const TutorDashboard = () => {
     const handler = () => {
       fetchBookings();
       fetchDashboardStats();
+      fetchProfile();
     };
 
     window.addEventListener("new-notification", handler);

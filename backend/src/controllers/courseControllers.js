@@ -7,6 +7,7 @@ import {
   notifyEndCourseWaiting,
   notifyCourseCompleted,
   notifyCourseCAncelled,
+  notifyReviewCreated,
   notifySessionConfirmed,
   notifySessionConfirmWait,
 } from "../services/notificationService.js";
@@ -758,6 +759,13 @@ export const reviewCourse = async (req, res) => {
       });
       return [r];
     });
+
+    await notifyReviewCreated(
+      review,
+      course,
+      course.tutorProfile.userId,
+      req.user.name,
+    );
 
     res.status(201).json({
       status: "success",
