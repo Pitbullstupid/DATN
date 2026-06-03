@@ -65,7 +65,6 @@ const WithdrawModal = ({ balance, onClose, onSuccess }) => {
     }
   };
 
-
   return (
     <dialog open className="modal modal-bottom sm:modal-middle">
       <div className="modal-box w-full max-w-md p-0 rounded-2xl overflow-hidden">
@@ -78,16 +77,23 @@ const WithdrawModal = ({ balance, onClose, onSuccess }) => {
 
         <div className="px-6 py-5 space-y-4">
           <div className="bg-success/10 border border-success/20 rounded-xl px-4 py-3 flex justify-between text-sm">
-            <span className="text-base-content/60">{t("wallet.available")}</span>
-            <span className="font-bold text-success">${balance.toFixed(2)} USD</span>
+            <span className="text-base-content/60">
+              {t("wallet.available")}
+            </span>
+            <span className="font-bold text-success">
+              ${balance.toFixed(2)} USD
+            </span>
           </div>
 
           <div>
             <label className="text-sm font-medium text-base-content mb-1 block">
-              {t("wallet.modal.amountLabel")} <span className="text-error">*</span>
+              {t("wallet.modal.amountLabel")}{" "}
+              <span className="text-error">*</span>
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40 font-semibold">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40 font-semibold">
+                $
+              </span>
               <input
                 type="number"
                 min={10}
@@ -141,11 +147,23 @@ const WithdrawModal = ({ balance, onClose, onSuccess }) => {
         </div>
 
         <div className="px-6 pb-6 flex gap-2">
-          <button className="btn btn-ghost flex-1" onClick={onClose} disabled={loading}>
+          <button
+            className="btn btn-ghost flex-1"
+            onClick={onClose}
+            disabled={loading}
+          >
             {t("wallet.modal.cancel")}
           </button>
-          <button className="btn btn-primary flex-1 gap-2" onClick={handleSubmit} disabled={loading}>
-            {loading ? <span className="loading loading-spinner loading-sm" /> : <FaCheck size={12} />}
+          <button
+            className="btn btn-primary flex-1 gap-2"
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? (
+              <span className="loading loading-spinner loading-sm" />
+            ) : (
+              <FaCheck size={12} />
+            )}
             {t("wallet.modal.confirm")}
           </button>
         </div>
@@ -183,6 +201,14 @@ export default function TutorWalletPage() {
 
     return () => clearTimeout(timer);
   }, []);
+  useEffect(() => {
+    const handler = () => {
+      fetchWallet();
+    };
+
+    window.addEventListener("new-notification", handler);
+    return () => window.removeEventListener("new-notification", handler);
+  }, []);
 
   const balance = wallet?.balance ?? 0;
   const held = wallet?.heldAmount ?? 0;
@@ -200,8 +226,12 @@ export default function TutorWalletPage() {
 
       <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
         <div className="mb-2">
-          <h1 className="text-2xl font-bold text-base-content">{t("wallet.title")}</h1>
-          <p className="text-base-content/50 text-sm mt-1">{t("wallet.subtitle")}</p>
+          <h1 className="text-2xl font-bold text-base-content">
+            {t("wallet.title")}
+          </h1>
+          <p className="text-base-content/50 text-sm mt-1">
+            {t("wallet.subtitle")}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -231,18 +261,25 @@ export default function TutorWalletPage() {
               key: "total",
             },
           ].map(({ icon: Icon, label, value, color, bg, key }) => (
-            <div key={key} className="bg-base-100 rounded-2xl border border-base-200 p-5 shadow-sm">
+            <div
+              key={key}
+              className="bg-base-100 rounded-2xl border border-base-200 p-5 shadow-sm"
+            >
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs text-base-content/50">{label}</p>
                   {loading ? (
                     <Skeleton className="h-7 w-24 mt-1" />
                   ) : (
-                    <p className={`text-2xl font-bold mt-1 ${color}`}>${value.toFixed(2)}</p>
+                    <p className={`text-2xl font-bold mt-1 ${color}`}>
+                      ${value.toFixed(2)}
+                    </p>
                   )}
                   <p className="text-xs text-base-content/30 mt-0.5">USD</p>
                 </div>
-                <div className={`w-10 h-10 rounded-xl ${bg} ${color} flex items-center justify-center`}>
+                <div
+                  className={`w-10 h-10 rounded-xl ${bg} ${color} flex items-center justify-center`}
+                >
                   <Icon size={18} />
                 </div>
               </div>
@@ -271,17 +308,30 @@ export default function TutorWalletPage() {
         {payments.length > 0 && (
           <div className="bg-base-100 rounded-2xl border border-base-200 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-base-200">
-              <h2 className="font-bold text-base-content">{t("wallet.releasedTitle")}</h2>
-              <p className="text-xs text-base-content/40 mt-0.5">{t("wallet.releasedSubtitle")}</p>
+              <h2 className="font-bold text-base-content">
+                {t("wallet.releasedTitle")}
+              </h2>
+              <p className="text-xs text-base-content/40 mt-0.5">
+                {t("wallet.releasedSubtitle")}
+              </p>
             </div>
             <div className="divide-y divide-base-200">
               {payments.map((p) => (
-                <div key={p.id} className="px-6 py-3 flex items-center justify-between">
+                <div
+                  key={p.id}
+                  className="px-6 py-3 flex items-center justify-between"
+                >
                   <div>
-                    <p className="font-medium text-sm text-base-content">{p.courseClass?.subject}</p>
-                    <p className="text-xs text-base-content/40">{fmtDate(p.releasedAt, dateLocale)}</p>
+                    <p className="font-medium text-sm text-base-content">
+                      {p.courseClass?.subject}
+                    </p>
+                    <p className="text-xs text-base-content/40">
+                      {fmtDate(p.releasedAt, dateLocale)}
+                    </p>
                   </div>
-                  <span className="font-bold text-success">+${p.amount.toFixed(2)}</span>
+                  <span className="font-bold text-success">
+                    +${p.amount.toFixed(2)}
+                  </span>
                 </div>
               ))}
             </div>
@@ -291,17 +341,28 @@ export default function TutorWalletPage() {
         {wallet?.withdrawals?.length > 0 && (
           <div className="bg-base-100 rounded-2xl border border-base-200 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-base-200">
-              <h2 className="font-bold text-base-content">{t("wallet.withdrawHistory")}</h2>
+              <h2 className="font-bold text-base-content">
+                {t("wallet.withdrawHistory")}
+              </h2>
             </div>
             <div className="divide-y divide-base-200">
               {wallet.withdrawals.map((w) => {
                 const badge = STATUS_BADGE[w.status] ?? "badge-ghost";
-                const label = t(`wallet.status.${w.status}`, { defaultValue: w.status });
+                const label = t(`wallet.status.${w.status}`, {
+                  defaultValue: w.status,
+                });
                 return (
-                  <div key={w.id} className="px-6 py-3 flex items-center justify-between">
+                  <div
+                    key={w.id}
+                    className="px-6 py-3 flex items-center justify-between"
+                  >
                     <div>
-                      <p className="font-medium text-sm text-base-content">${w.amount.toFixed(2)} USD</p>
-                      <p className="text-xs text-base-content/40">{fmtDate(w.requestedAt, dateLocale)}</p>
+                      <p className="font-medium text-sm text-base-content">
+                        ${w.amount.toFixed(2)} USD
+                      </p>
+                      <p className="text-xs text-base-content/40">
+                        {fmtDate(w.requestedAt, dateLocale)}
+                      </p>
                     </div>
                     <span className={`badge ${badge} badge-sm`}>{label}</span>
                   </div>

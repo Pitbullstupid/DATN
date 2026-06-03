@@ -135,6 +135,33 @@ const getReviews = (params = {}) => API.get("/admin/reviews", { params });
  */
 const deleteReview = (reviewId) => API.delete(`/admin/reviews/${reviewId}`);
 
+// ─── Subjects ─────────────────────────────────────────────────────────────────
+
+/**
+ * Danh sách môn học (admin — có cả isActive=false)
+ * @param {{ search?, isActive? }} params
+ */
+const getSubjects = (params = {}) => API.get("/admin/subjects", { params });
+
+/**
+ * Tạo môn học mới
+ * @param {{ name: string }} body
+ */
+const createSubject = (body) => API.post("/admin/subjects", body);
+
+/**
+ * Cập nhật môn học
+ * @param {string} id
+ * @param {{ name?: string, isActive?: boolean }} body
+ */
+const updateSubject = (id, body) => API.patch(`/admin/subjects/${id}`, body);
+
+/**
+ * Xoá mềm môn học (isActive = false)
+ * @param {string} id
+ */
+const deleteSubject = (id) => API.delete(`/admin/subjects/${id}`);
+
 // ─── Export ───────────────────────────────────────────────────────────────────
 export const adminApi = {
   // Stats
@@ -163,4 +190,10 @@ export const adminApi = {
   // Reviews
   getReviews,
   deleteReview,
+
+  // Subjects
+  getSubjects,
+  createSubject,
+  updateSubject,
+  deleteSubject,
 };

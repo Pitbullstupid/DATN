@@ -10,6 +10,7 @@ export const buildNavItems = (pendingCount) => [
   { key: "courses",   label: "Khoá học",     icon: FiBookOpen },
   { key: "payments",  label: "Thanh toán",   icon: FiCreditCard },
   { key: "reviews",   label: "Đánh giá",     icon: FiStar },
+  { key: "subjects",  label: "Môn học",      icon: FiBookOpen },
 ];
 
 export default function AdminSidebar({ collapsed, setCollapsed, activeSection, setActiveSection, pendingCount }) {

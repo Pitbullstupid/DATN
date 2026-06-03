@@ -672,3 +672,99 @@ export const deleteReview = async (req, res) => {
     res.status(500).json({ status: "error", message: err.message });
   }
 };
+
+// ─────────────────────────────────────────────────────────────
+// GET /admin/subjects
+// ─────────────────────────────────────────────────────────────
+export const getSubjectsAdmin = async (req, res) => {
+  try {
+    const { search, isActive } = req.query;
+
+    const where = {};
+    if (search) where.name = { contains: search, mode: "insensitive" };
+    if (isActive !== undefined) where.isActive = isActive === "true";
+
+    const subjects = await prisma.subject.findMany({
+      where,
+      orderBy: { name: "asc" },
+    });
+
+    res.status(200).json({ status: "success", data: { subjects } });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// POST /admin/subjects
+// Body: { name: string }
+// ─────────────────────────────────────────────────────────────
+export const createSubject = async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name?.trim()) {
+      return res.status(400).json({ status: "error", message: "Tên môn học không được để trống" });
+    }
+
+    const subject = await prisma.subject.create({
+      data: { name: name.trim() },
+    });
+
+    res.status(201).json({ status: "success", data: { subject } });
+  } catch (err) {
+    // Prisma unique constraint violation
+    if (err.code === "P2002") {
+      return res.status(409).json({ status: "error", message: "Môn học này đã tồn tại" });
+    }
+    res.status(500).json({ status: "error", message: err.message });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// PATCH /admin/subjects/:id
+// Body: { name?, isActive? }
+// ─────────────────────────────────────────────────────────────
+export const updateSubject = async (req, res) => {
+  try {
+    const { name, isActive } = req.body;
+    const { id } = req.params;
+
+    const exists = await prisma.subject.findUnique({ where: { id } });
+    if (!exists) {
+      return res.status(404).json({ status: "error", message: "Không tìm thấy môn học" });
+    }
+
+    const data = {};
+    if (name !== undefined) data.name = name.trim();
+    if (isActive !== undefined) data.isActive = isActive;
+
+    const subject = await prisma.subject.update({ where: { id }, data });
+
+    res.status(200).json({ status: "success", data: { subject } });
+  } catch (err) {
+    if (err.code === "P2002") {
+      return res.status(409).json({ status: "error", message: "Tên môn học đã được dùng" });
+    }
+    res.status(500).json({ status: "error", message: err.message });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// DELETE /admin/subjects/:id  — hard delete
+// ─────────────────────────────────────────────────────────────
+export const deleteSubject = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const exists = await prisma.subject.findUnique({ where: { id } });
+    if (!exists) {
+      return res.status(404).json({ status: "error", message: "Không tìm thấy môn học" });
+    }
+
+    await prisma.subject.delete({ where: { id } });
+
+    res.status(200).json({ status: "success", message: "Đã xoá môn học" });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+};
