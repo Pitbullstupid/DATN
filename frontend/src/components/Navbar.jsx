@@ -59,15 +59,9 @@ const Navbar = () => {
               <a onClick={() => navigate("/")}>{t("login.dashboard")}</a>
             </li>
             <li>
-              <a>Parent</a>
-              <ul className="p-2">
-                <li>
-                  <a>Submenu 1</a>
-                </li>
-                <li>
-                  <a>Submenu 2</a>
-                </li>
-              </ul>
+              <a onClick={() => navigate("/courses")}>
+                {t("common:nav.submenu1")}
+              </a>
             </li>
             <li>
               <a onClick={() => navigate("/tutors")}>
@@ -115,6 +109,11 @@ const Navbar = () => {
           <li>
             <a onClick={() => navigate("/tutor/bookings")}>
               {t("login.dashboard_booking")}
+            </a>
+          </li>
+          <li>
+            <a onClick={() => navigate("/schedule")}>
+              {user?.role === "STUDENT" ? t("common:nav.schedule") : t("common:nav.schedule1")}
             </a>
           </li>
         </ul>

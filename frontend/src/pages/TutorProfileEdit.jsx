@@ -22,6 +22,7 @@ import {
   deleteEducation,
   submitProfile,
 } from "../api/tutorApi";
+import { getSubjects } from "../api/subjectApi";
 
 const STEP_META = [
   { id: 1, icon: FiUser },
@@ -32,11 +33,6 @@ const STEP_META = [
 
 const TIMING_SHIFTS  = ["MORNING", "AFTERNOON", "EVENING", "FLEXIBLE"];
 const TUTORING_STYLES = ["ONE_ON_ONE", "GROUP", "BOTH"];
-
-const SUBJECT_OPTIONS = [
-  "Math","Physics","Chemistry","Biology","English","Literature",
-  "History","Geography","Computer Science","Economics",
-];
 
 // ─── Helpers ──────────────────────────────────────────────────
 const Skeleton = ({ className = "" }) => (
@@ -97,6 +93,8 @@ const TutorProfileEdit = () => {
   const [profileStatus, setProfileStatus] = useState("PENDING");
   const [avatarPreview, setAvatarPreview] = useState(user?.avatar || "");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [subjectOptions, setSubjectOptions] = useState([]);
+  const [subjectsLoading, setSubjectsLoading] = useState(false);
 
   // Step 1
   const [step1, setStep1] = useState({ bio: "", phone: "", address: "", country: "" });
@@ -157,8 +155,35 @@ const TutorProfileEdit = () => {
     })();
   }, [t]);
 
+  useEffect(() => {
+    let ignore = false;
+
+    const loadSubjects = async () => {
+      setSubjectsLoading(true);
+      try {
+        const { data } = await getSubjects();
+        const names = (data?.data?.subjects || []).map((subject) => subject.name);
+        if (!ignore) setSubjectOptions(names);
+      } catch (err) {
+        if (!ignore) {
+          showToast("error", err.message || t("toast:something_wrong"));
+        }
+      } finally {
+        if (!ignore) setSubjectsLoading(false);
+      }
+    };
+
+    loadSubjects();
+    return () => {
+      ignore = true;
+    };
+  }, [t]);
+
   // ── Locked guard ─────────────────────────────────────────
   const isLocked = ["REVIEWING", "APPROVED", "SUSPENDED"].includes(profileStatus);
+  const visibleSubjectOptions = Array.from(
+    new Set([...subjectOptions, ...step2.subjects]),
+  );
 
   const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0];
@@ -498,7 +523,12 @@ const TutorProfileEdit = () => {
                       hint={t("profile:fields.subjects_hint")}
                     >
                       <div className="flex flex-wrap gap-2 p-3 rounded-xl border border-base-300 bg-base-200/40 min-h-[52px]">
-                        {SUBJECT_OPTIONS.map((sub) => (
+                        {subjectsLoading && visibleSubjectOptions.length === 0 && (
+                          <span className="text-xs text-base-content/50">
+                            {t("profile:fields.subjects_loading", { defaultValue: "Loading subjects..." })}
+                          </span>
+                        )}
+                        {visibleSubjectOptions.map((sub) => (
                           <button
                             key={sub}
                             type="button"

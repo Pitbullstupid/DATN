@@ -53,6 +53,18 @@ const fmtDatetimeLocal = (iso) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
+const formatPreferredStudyTime = (startDate, preferredTime, dateLocale) => {
+  if (!startDate && !preferredTime) return "";
+  const date = startDate
+    ? new Date(startDate).toLocaleDateString(dateLocale, {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
+    : "";
+  return [date, preferredTime].filter(Boolean).join(" - ");
+};
+
 const RejectModal = ({ booking, onClose, onSuccess }) => {
   const { t } = useTranslation(["bookings", "toast"]);
   const [tutorNote, setTutorNote] = useState("");
@@ -156,11 +168,18 @@ const BookingCard = ({ booking, onAccept, onReject, t, dateLocale }) => {
     status,
     tutorNote,
     createdAt,
+    startDate,
+    preferredTime,
   } = booking;
   const badge = STATUS_BADGE[status] ?? "badge-ghost";
   const statusLabel = status
     ? t(`bookings:status.${status.toLowerCase()}`)
     : status;
+  const preferredStudyTime = formatPreferredStudyTime(
+    startDate,
+    preferredTime,
+    dateLocale,
+  );
 
   const fmt = (iso) =>
     iso
@@ -205,6 +224,17 @@ const BookingCard = ({ booking, onAccept, onReject, t, dateLocale }) => {
             <strong className="text-base-content">{subject}</strong>
           </span>
         </div>
+        {preferredStudyTime && (
+          <div className="flex items-center gap-2 text-base-content/70">
+            <FaClock size={11} className="text-primary shrink-0" />
+            <span>
+              {t("bookings:tutor.preferred_time")}:{" "}
+              <strong className="text-base-content">
+                {preferredStudyTime}
+              </strong>
+            </span>
+          </div>
+        )}
         <div className="flex items-center gap-2 text-base-content/70">
           <FaEnvelope size={11} className="text-primary shrink-0" />
           <span className="truncate">{student?.email || email}</span>

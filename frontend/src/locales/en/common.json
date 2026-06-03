@@ -5,7 +5,9 @@
     "vietnamese": "Tiếng Việt",
     "parent": "Parent",
     "submenu1": "Courses",
-    "tutors_link": "Tutors"
+    "tutors_link": "Tutors",
+    "schedule": "Schedule",
+    "schedule1": "Schedule"
   },
   "modal_login": {
     "title_login": "Log in",

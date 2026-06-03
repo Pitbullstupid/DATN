@@ -19,6 +19,7 @@ import PaymentCancelPage from "./components/PaymentCancelPage.jsx";
 import TutorWalletPage from "./components/TutorWalletPage.jsx";
 import NotificationsPage from "./pages/NotificationsPage.jsx";
 import AdminDashboard from "./admin/AdminDashboard.jsx";
+import Scheduled from "./pages/Scheduled.jsx";
 function App() {
   const { user } = useAuth();
   return (
@@ -63,6 +64,7 @@ function App() {
           <Route path="/tutor/wallet" element={<TutorWalletPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/schedule" element={<Scheduled />} />
         </Routes>
       </main>
     </div>

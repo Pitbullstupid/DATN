@@ -5,9 +5,97 @@ import {
   notifyBookingCancelled,
 } from "../services/notificationService.js";
 
+const parsePreferredStudyTime = (startDate, preferredTime) => {
+  if (!startDate || !preferredTime) return null;
+  if (!/^\d{2}:\d{2}$/.test(preferredTime)) return null;
+
+  const datePart =
+    startDate instanceof Date
+      ? startDate.toISOString().slice(0, 10)
+      : String(startDate).slice(0, 10);
+  const selectedAt = new Date(`${datePart}T${preferredTime}:00`);
+  return Number.isNaN(selectedAt.getTime()) ? null : selectedAt;
+};
+
+const nextDateForDayOfWeek = (dayOfWeek) => {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  const diff = (dayOfWeek - date.getDay() + 7) % 7;
+  date.setDate(date.getDate() + diff);
+  return date;
+};
+
+const normalizeSchedules = (schedules = []) =>
+  schedules
+    .map((schedule) => ({
+      dayOfWeek: Number(schedule.dayOfWeek),
+      startTime: schedule.startTime,
+      endTime: schedule.endTime,
+    }))
+    .filter(
+      (schedule) =>
+        Number.isInteger(schedule.dayOfWeek) &&
+        schedule.dayOfWeek >= 0 &&
+        schedule.dayOfWeek <= 6 &&
+        /^\d{2}:\d{2}$/.test(schedule.startTime || "") &&
+        /^\d{2}:\d{2}$/.test(schedule.endTime || ""),
+    );
+
+const hasScheduleOverlap = (slot, existing) =>
+  slot.dayOfWeek === existing.dayOfWeek &&
+  slot.startTime < existing.endTime &&
+  slot.endTime > existing.startTime;
+
 export const createBooking = async (req, res) => {
   try {
-    const { tutorProfileId, name, email, subject, message } = req.body;
+    const {
+      tutorProfileId,
+      name,
+      email,
+      subject,
+      message,
+      startDate,
+      preferredTime,
+      schedules,
+    } = req.body;
+    const weeklySchedules = normalizeSchedules(schedules);
+    const firstSchedule = weeklySchedules[0];
+    const bookingStartDate =
+      startDate || (firstSchedule ? nextDateForDayOfWeek(firstSchedule.dayOfWeek) : null);
+    const bookingPreferredTime = preferredTime || firstSchedule?.startTime;
+    const preferredStudyAt = parsePreferredStudyTime(
+      bookingStartDate,
+      bookingPreferredTime,
+    );
+
+    if (!preferredStudyAt && weeklySchedules.length === 0) {
+      return res.status(400).json({
+        status: "error",
+        message: "Vui lòng chọn ngày và thời gian học mong muốn",
+      });
+    }
+
+    const invalidSchedule = weeklySchedules.find(
+      (schedule) => schedule.startTime >= schedule.endTime,
+    );
+    if (invalidSchedule) {
+      return res.status(400).json({
+        status: "error",
+        message: "Giờ kết thúc phải sau giờ bắt đầu",
+      });
+    }
+
+    const selectedSubject = await prisma.subject.findFirst({
+      where: { name: subject, isActive: true },
+      select: { id: true },
+    });
+
+    if (!selectedSubject) {
+      return res
+        .status(400)
+        .json({ status: "error", message: "Môn học không hợp lệ" });
+    }
+
     const tutorProfile = await prisma.tutorProfile.findUnique({
       where: { id: tutorProfileId },
       select: { userId: true, status: true },
@@ -35,6 +123,58 @@ export const createBooking = async (req, res) => {
           message: "Bạn đã có yêu cầu đang chờ xử lý với gia sư này",
         });
 
+    let conflictingSession = null;
+
+    if (weeklySchedules.length > 0) {
+      const existingSchedules = await prisma.courseSchedule.findMany({
+        where: {
+          dayOfWeek: { in: weeklySchedules.map((slot) => slot.dayOfWeek) },
+          courseClass: {
+            tutorProfileId,
+            status: { in: ["PENDING_PAYMENT", "UPCOMING", "ONGOING"] },
+          },
+        },
+        select: { dayOfWeek: true, startTime: true, endTime: true },
+      });
+
+      conflictingSession = weeklySchedules.find((slot) =>
+        existingSchedules.some((existingSchedule) =>
+          hasScheduleOverlap(slot, existingSchedule),
+        ),
+      );
+    } else if (preferredStudyAt) {
+      const preferredStudyDayStart = new Date(preferredStudyAt);
+      preferredStudyDayStart.setHours(0, 0, 0, 0);
+      const preferredStudyDayEnd = new Date(preferredStudyDayStart);
+      preferredStudyDayEnd.setDate(preferredStudyDayEnd.getDate() + 1);
+
+      const existingSessions = await prisma.courseSession.findMany({
+        where: {
+          scheduledAt: { gte: preferredStudyDayStart, lt: preferredStudyDayEnd },
+          status: { not: "CANCELLED" },
+          courseClass: {
+            tutorProfileId,
+            status: { in: ["PENDING_PAYMENT", "UPCOMING", "ONGOING"] },
+          },
+        },
+        select: { scheduledAt: true, durationMin: true },
+      });
+
+      conflictingSession = existingSessions.find((session) => {
+        const sessionStart = new Date(session.scheduledAt);
+        const sessionEnd = new Date(sessionStart);
+        sessionEnd.setMinutes(sessionEnd.getMinutes() + session.durationMin);
+        return preferredStudyAt >= sessionStart && preferredStudyAt < sessionEnd;
+      });
+    }
+
+    if (conflictingSession) {
+      return res.status(409).json({
+        status: "error",
+        message: "Thời gian này đã trùng với lịch học có sẵn của gia sư",
+      });
+    }
+
     const booking = await prisma.bookingRequest.create({
       data: {
         studentId: req.user.id,
@@ -43,6 +183,9 @@ export const createBooking = async (req, res) => {
         email,
         subject,
         message,
+        startDate: preferredStudyAt,
+        preferredDays: weeklySchedules.map((slot) => String(slot.dayOfWeek)),
+        preferredTime: bookingPreferredTime,
       },
       include: {
         tutorProfile: {

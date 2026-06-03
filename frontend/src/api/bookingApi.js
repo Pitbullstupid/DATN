@@ -25,7 +25,7 @@ API.interceptors.response.use(
 
 /**
  * Gửi yêu cầu thuê gia sư
- * @param {{ tutorProfileId, name, email, subject, message }} data
+ * @param {{ tutorProfileId, name, email, subject, schedules?, startDate?, preferredTime?, message }} data
  */
 export const createBooking = (data) => API.post("/bookings", data);
 

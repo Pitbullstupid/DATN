@@ -29,13 +29,38 @@ const STATUS_BADGE = {
   CANCELLED: "badge-ghost",
 };
 
+const formatPreferredStudyTime = (startDate, preferredTime, dateLocale) => {
+  if (!startDate && !preferredTime) return "";
+  const date = startDate
+    ? new Date(startDate).toLocaleDateString(dateLocale, {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
+    : "";
+  return [date, preferredTime].filter(Boolean).join(" - ");
+};
+
 const BookingCard = ({ booking, onCancel, t, dateLocale }) => {
-  const { tutorProfile, subject, message, status, tutorNote, createdAt } =
-    booking;
+  const {
+    tutorProfile,
+    subject,
+    message,
+    status,
+    tutorNote,
+    createdAt,
+    startDate,
+    preferredTime,
+  } = booking;
   const badge = STATUS_BADGE[status] ?? "badge-ghost";
   const statusLabel = status
     ? t(`bookings:status.${status.toLowerCase()}`)
     : status;
+  const preferredStudyTime = formatPreferredStudyTime(
+    startDate,
+    preferredTime,
+    dateLocale,
+  );
 
   const fmt = (iso) =>
     iso
@@ -84,6 +109,17 @@ const BookingCard = ({ booking, onCancel, t, dateLocale }) => {
             <strong className="text-base-content">{subject}</strong>
           </span>
         </div>
+        {preferredStudyTime && (
+          <div className="flex items-center gap-2 text-base-content/70">
+            <FaClock size={12} className="text-primary shrink-0" />
+            <span>
+              {t("bookings:student.preferred_time")}:{" "}
+              <strong className="text-base-content">
+                {preferredStudyTime}
+              </strong>
+            </span>
+          </div>
+        )}
         <div className="flex items-center gap-2 text-base-content/70">
           <FaCalendarAlt size={12} className="text-primary shrink-0" />
           <span>

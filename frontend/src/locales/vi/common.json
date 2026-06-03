@@ -5,7 +5,9 @@
     "vietnamese": "Tiếng Việt",
     "parent": "Danh mục",
     "submenu1": "Lớp học",
-    "tutors_link": "Gia sư"
+    "tutors_link": "Gia sư",
+    "schedule": "Lịch học",
+    "schedule1": "Lịch dạy"
   },
   "modal_login": {
     "title_login": "Đăng nhập",

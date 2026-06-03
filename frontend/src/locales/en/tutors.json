@@ -99,6 +99,8 @@
     "name": "Name",
     "email": "Email",
     "subject": "Subject",
+    "study_date": "Preferred study date",
+    "study_time": "Preferred study time",
     "message": "Message",
     "name_placeholder": "Your full name",
     "email_placeholder": "your@email.com",
@@ -110,6 +112,8 @@
       "email_required": "Email is required",
       "email_invalid": "Invalid email address",
       "subject_required": "Subject is required",
+      "study_date_required": "Preferred study date is required",
+      "study_time_required": "Preferred study time is required",
       "message_required": "Message is required"
     }
   }

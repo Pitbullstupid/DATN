@@ -110,7 +110,11 @@
       "email_required": "Vui lòng nhập email",
       "email_invalid": "Email không hợp lệ",
       "subject_required": "Vui lòng nhập môn học",
-      "message_required": "Vui lòng nhập tin nhắn"
-    }
+      "message_required": "Vui lòng nhập tin nhắn",
+      "study_date_required": "Vui lòng chọn ngày muốn học",
+      "study_time_required": "Vui lòng chọn thời gian muốn học"
+    },
+    "study_date": "Ngày muốn học",
+    "study_time": "Thời gian muốn học"
   }
 }

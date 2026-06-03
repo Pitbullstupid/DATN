@@ -16,7 +16,8 @@
     "cancel_request": "Huỷ yêu cầu",
     "empty": "Không có yêu cầu nào",
     "find_tutor": "Tìm gia sư",
-    "tutor_role": "Gia sư {{subject}}"
+    "tutor_role": "Gia sư {{subject}}",
+    "preferred_time": "Thời gian muốn học"
   },
   "tutor": {
     "title": "Yêu cầu đến",
@@ -29,7 +30,8 @@
     "session": "Buổi học:",
     "min": "phút",
     "empty_title": "Không có yêu cầu",
-    "empty_subtitle": "Học viên thuê bạn sẽ hiện ở đây"
+    "empty_subtitle": "Học viên thuê bạn sẽ hiện ở đây",
+    "preferred_time": "Thời gian muốn học"
   },
   "modal": {
     "accept_title": "Chấp nhận yêu cầu",

@@ -131,10 +131,24 @@ export const updateStep2 = async (req, res) => {
       });
     }
 
+    const uniqueSubjects = Array.isArray(subjects) ? [...new Set(subjects)] : subjects;
+    if (Array.isArray(uniqueSubjects) && uniqueSubjects.length > 0) {
+      const activeSubjects = await prisma.subject.findMany({
+        where: { name: { in: uniqueSubjects }, isActive: true },
+        select: { name: true },
+      });
+
+      if (activeSubjects.length !== uniqueSubjects.length) {
+        return res
+          .status(400)
+          .json({ status: "error", message: "Môn học không hợp lệ" });
+      }
+    }
+
     const updated = await prisma.tutorProfile.update({
       where: { userId: req.user.id },
       data: {
-        subjects,
+        subjects: uniqueSubjects,
         preferredAreas,
         daysPerWeek,
         timingShift,
