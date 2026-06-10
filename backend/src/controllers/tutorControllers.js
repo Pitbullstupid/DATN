@@ -68,15 +68,33 @@ export const getMyProfile = async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 export const updateStep1 = async (req, res) => {
   try {
-    const { bio, phone, address, country } = req.body;
+    const { bio, phone, address, country, gender } = req.body;
     const profile = await getOwnProfile(req.user.id);
 
-    // Chỉ cho sửa khi chưa REVIEWING / APPROVED / SUSPENDED
-    if (["REVIEWING", "APPROVED", "SUSPENDED"].includes(profile.status)) {
+    // Chỉ block khi đang REVIEWING hoặc SUSPENDED
+    // (APPROVED vẫn cho phép cập nhật thông tin cá nhân step 1)
+    if (["REVIEWING", "SUSPENDED"].includes(profile.status)) {
       return res.status(403).json({
         status: "error",
         message:
-          "Hồ sơ đang được duyệt hoặc đã được phê duyệt, không thể chỉnh sửa",
+          "Hồ sơ đang được duyệt hoặc đã bị tạm khóa, không thể chỉnh sửa",
+      });
+    }
+
+    // Validate gender nếu có truyền lên
+    const VALID_GENDERS = ["MALE", "FEMALE", "OTHER"];
+    if (gender !== undefined && !VALID_GENDERS.includes(gender)) {
+      return res.status(400).json({
+        status: "error",
+        message: "Giá trị giới tính không hợp lệ (MALE | FEMALE | OTHER)",
+      });
+    }
+
+    // Cập nhật gender lên bảng User (nếu có)
+    if (gender !== undefined) {
+      await prisma.user.update({
+        where: { id: req.user.id },
+        data: { gender },
       });
     }
 
@@ -131,7 +149,9 @@ export const updateStep2 = async (req, res) => {
       });
     }
 
-    const uniqueSubjects = Array.isArray(subjects) ? [...new Set(subjects)] : subjects;
+    const uniqueSubjects = Array.isArray(subjects)
+      ? [...new Set(subjects)]
+      : subjects;
     if (Array.isArray(uniqueSubjects) && uniqueSubjects.length > 0) {
       const activeSubjects = await prisma.subject.findMany({
         where: { name: { in: uniqueSubjects }, isActive: true },

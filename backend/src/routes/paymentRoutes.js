@@ -6,6 +6,10 @@ import {
   getMyWallet,
   requestWithdrawal,
   verifyPayment,
+  getBankAccounts,
+  createBankAccount,
+  updateBankAccount,
+  deleteBankAccount,
 } from "../controllers/paymentControllers.js";
 import { authMiddleware } from "../middleware/adthMiddleware.js";
 
@@ -27,19 +31,27 @@ const isStudent = (req, res, next) => {
 router.post(
   "/webhook",
   express.raw({ type: "application/json" }),
-  stripeWebhook
+  stripeWebhook,
 );
 
 // ── Student ──────────────────────────────────────────────────
-router.post("/checkout/:courseId",  authMiddleware, isStudent, createCheckoutSession);
-router.get ("/success",             authMiddleware, isStudent, verifyPayment);
+router.post(
+  "/checkout/:courseId",
+  authMiddleware,
+  isStudent,
+  createCheckoutSession,
+);
+router.get("/success", authMiddleware, isStudent, verifyPayment);
 
 // ── Tutor ────────────────────────────────────────────────────
-router.get ("/wallet",              authMiddleware, isTutor,   getMyWallet);
-router.post("/withdraw",            authMiddleware, isTutor,   requestWithdrawal);
+router.get("/wallet", authMiddleware, isTutor, getMyWallet);
+router.get("/bank-accounts", authMiddleware, isTutor, getBankAccounts);
+router.post("/bank-accounts", authMiddleware, isTutor, createBankAccount);
+router.patch("/bank-accounts/:id", authMiddleware, isTutor, updateBankAccount);
+router.delete("/bank-accounts/:id", authMiddleware, isTutor, deleteBankAccount);
+router.post("/withdraw", authMiddleware, isTutor, requestWithdrawal);
 
 // ── Chung ────────────────────────────────────────────────────
-router.get ("/course/:courseId",    authMiddleware, getPaymentByCourse);
+router.get("/course/:courseId", authMiddleware, getPaymentByCourse);
 
 export default router;
-

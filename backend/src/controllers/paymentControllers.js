@@ -337,18 +337,236 @@ export const releasePayment = async (courseId) => {
 };
 
 // ─────────────────────────────────────────────────────────────
+// GET /payments/bank-accounts
+// Tutor xem danh sách tài khoản ngân hàng
+// ─────────────────────────────────────────────────────────────
+export const getBankAccounts = async (req, res) => {
+  try {
+    const tutorProfile = await prisma.tutorProfile.findUnique({
+      where: { userId: req.user.id },
+    });
+    if (!tutorProfile)
+      return res
+        .status(404)
+        .json({ status: "error", message: "Không tìm thấy hồ sơ gia sư" });
+
+    const accounts = await prisma.bankAccount.findMany({
+      where: { tutorProfileId: tutorProfile.id },
+      orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
+    });
+
+    res.status(200).json({ status: "success", data: { accounts } });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// POST /payments/bank-accounts
+// Tutor thêm tài khoản ngân hàng mới
+// Body: { bankName, accountNumber, accountHolder, branch?, isDefault? }
+// ─────────────────────────────────────────────────────────────
+export const createBankAccount = async (req, res) => {
+  try {
+    const {
+      bankName,
+      accountNumber,
+      accountHolder,
+      branch,
+      isDefault = false,
+    } = req.body;
+
+    if (!bankName?.trim() || !accountNumber?.trim() || !accountHolder?.trim())
+      return res
+        .status(400)
+        .json({
+          status: "error",
+          message: "Vui lòng điền đầy đủ thông tin ngân hàng",
+        });
+
+    const tutorProfile = await prisma.tutorProfile.findUnique({
+      where: { userId: req.user.id },
+    });
+    if (!tutorProfile)
+      return res
+        .status(404)
+        .json({ status: "error", message: "Không tìm thấy hồ sơ gia sư" });
+
+    const account = await prisma.$transaction(async (tx) => {
+      // Nếu đặt làm mặc định → bỏ mặc định của các thẻ cũ
+      if (isDefault) {
+        await tx.bankAccount.updateMany({
+          where: { tutorProfileId: tutorProfile.id },
+          data: { isDefault: false },
+        });
+      }
+
+      // Nếu chưa có thẻ nào → tự động là mặc định
+      const existingCount = await tx.bankAccount.count({
+        where: { tutorProfileId: tutorProfile.id },
+      });
+
+      return tx.bankAccount.create({
+        data: {
+          tutorProfileId: tutorProfile.id,
+          bankName: bankName.trim(),
+          accountNumber: accountNumber.trim(),
+          accountHolder: accountHolder.trim(),
+          branch: branch?.trim() || null,
+          isDefault: isDefault || existingCount === 0,
+        },
+      });
+    });
+
+    res
+      .status(201)
+      .json({
+        status: "success",
+        message: "Đã thêm tài khoản ngân hàng",
+        data: { account },
+      });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// PATCH /payments/bank-accounts/:id
+// Tutor cập nhật / đặt làm mặc định
+// Body: { bankName?, accountNumber?, accountHolder?, branch?, isDefault? }
+// ─────────────────────────────────────────────────────────────
+export const updateBankAccount = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { bankName, accountNumber, accountHolder, branch, isDefault } =
+      req.body;
+
+    const tutorProfile = await prisma.tutorProfile.findUnique({
+      where: { userId: req.user.id },
+    });
+    if (!tutorProfile)
+      return res
+        .status(404)
+        .json({ status: "error", message: "Không tìm thấy hồ sơ gia sư" });
+
+    const existing = await prisma.bankAccount.findFirst({
+      where: { id, tutorProfileId: tutorProfile.id },
+    });
+    if (!existing)
+      return res
+        .status(404)
+        .json({
+          status: "error",
+          message: "Không tìm thấy tài khoản ngân hàng",
+        });
+
+    const account = await prisma.$transaction(async (tx) => {
+      if (isDefault) {
+        await tx.bankAccount.updateMany({
+          where: { tutorProfileId: tutorProfile.id },
+          data: { isDefault: false },
+        });
+      }
+
+      const data = {};
+      if (bankName !== undefined) data.bankName = bankName.trim();
+      if (accountNumber !== undefined)
+        data.accountNumber = accountNumber.trim();
+      if (accountHolder !== undefined)
+        data.accountHolder = accountHolder.trim();
+      if (branch !== undefined) data.branch = branch?.trim() || null;
+      if (isDefault !== undefined) data.isDefault = isDefault;
+
+      return tx.bankAccount.update({ where: { id }, data });
+    });
+
+    res
+      .status(200)
+      .json({
+        status: "success",
+        message: "Đã cập nhật tài khoản ngân hàng",
+        data: { account },
+      });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// DELETE /payments/bank-accounts/:id
+// Tutor xoá tài khoản ngân hàng
+// ─────────────────────────────────────────────────────────────
+export const deleteBankAccount = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const tutorProfile = await prisma.tutorProfile.findUnique({
+      where: { userId: req.user.id },
+    });
+    if (!tutorProfile)
+      return res
+        .status(404)
+        .json({ status: "error", message: "Không tìm thấy hồ sơ gia sư" });
+
+    const existing = await prisma.bankAccount.findFirst({
+      where: { id, tutorProfileId: tutorProfile.id },
+    });
+    if (!existing)
+      return res
+        .status(404)
+        .json({
+          status: "error",
+          message: "Không tìm thấy tài khoản ngân hàng",
+        });
+
+    await prisma.$transaction(async (tx) => {
+      await tx.bankAccount.delete({ where: { id } });
+
+      // Nếu đây là thẻ mặc định → chuyển mặc định sang thẻ mới nhất còn lại
+      if (existing.isDefault) {
+        const next = await tx.bankAccount.findFirst({
+          where: { tutorProfileId: tutorProfile.id },
+          orderBy: { createdAt: "desc" },
+        });
+        if (next) {
+          await tx.bankAccount.update({
+            where: { id: next.id },
+            data: { isDefault: true },
+          });
+        }
+      }
+    });
+
+    res
+      .status(200)
+      .json({ status: "success", message: "Đã xoá tài khoản ngân hàng" });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
 // POST /payments/withdraw
 // Tutor yêu cầu rút tiền
-// Body: { amount }
+// Body: { amount, bankAccountId }
 // ─────────────────────────────────────────────────────────────
 export const requestWithdrawal = async (req, res) => {
   try {
-    const { amount } = req.body;
+    const { amount, bankAccountId } = req.body;
 
     if (!amount || parseFloat(amount) <= 0) {
       return res
         .status(400)
         .json({ status: "error", message: "Số tiền không hợp lệ" });
+    }
+
+    if (!bankAccountId) {
+      return res
+        .status(400)
+        .json({
+          status: "error",
+          message: "Vui lòng chọn tài khoản ngân hàng để nhận tiền",
+        });
     }
 
     const tutorProfile = await prisma.tutorProfile.findUnique({
@@ -359,6 +577,18 @@ export const requestWithdrawal = async (req, res) => {
       return res
         .status(404)
         .json({ status: "error", message: "Không tìm thấy hồ sơ gia sư" });
+
+    // Kiểm tra tài khoản ngân hàng thuộc về gia sư này
+    const bankAccount = await prisma.bankAccount.findFirst({
+      where: { id: bankAccountId, tutorProfileId: tutorProfile.id },
+    });
+    if (!bankAccount)
+      return res
+        .status(404)
+        .json({
+          status: "error",
+          message: "Không tìm thấy tài khoản ngân hàng",
+        });
 
     const wallet = await prisma.tutorWallet.findUnique({
       where: { tutorProfileId: tutorProfile.id },
@@ -374,14 +604,22 @@ export const requestWithdrawal = async (req, res) => {
       });
     }
 
-    // Tạo Stripe Payout (cần tutor đã connect Stripe account)
-    // Nếu chưa có stripeAccountId thì chỉ ghi record, admin xử lý thủ công
+    // Snapshot thông tin ngân hàng tại thời điểm rút
+    const bankSnapshot = {
+      bankName: bankAccount.bankName,
+      accountNumber: bankAccount.accountNumber,
+      accountHolder: bankAccount.accountHolder,
+      branch: bankAccount.branch || null,
+    };
+
     const withdrawal = await prisma.$transaction(async (tx) => {
       const w = await tx.withdrawal.create({
         data: {
           walletId: wallet.id,
           amount: withdrawAmount,
           status: "PENDING",
+          bankAccountId: bankAccount.id,
+          bankSnapshot,
         },
       });
 

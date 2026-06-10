@@ -1,14 +1,31 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import {
-  FiUser, FiBook, FiAward, FiShare2, FiGlobe,
-  FiPhone, FiMapPin, FiDollarSign, FiClock,
-  FiPlus, FiTrash2, FiChevronLeft, FiChevronRight,
-  FiSend, FiCheckCircle, FiAlertCircle, FiInfo,
-  FiFacebook, FiTwitter, FiYoutube, FiInstagram,
+  FiUser,
+  FiBook,
+  FiAward,
+  FiShare2,
+  FiGlobe,
+  FiPhone,
+  FiMapPin,
+  FiDollarSign,
+  FiClock,
+  FiPlus,
+  FiTrash2,
+  FiChevronLeft,
+  FiChevronRight,
+  FiSend,
+  FiCheckCircle,
+  FiAlertCircle,
+  FiInfo,
+  FiFacebook,
+  FiTwitter,
+  FiYoutube,
+  FiInstagram,
   FiCamera,
+  FiZap,
 } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import { userApi } from "../api/userApi";
@@ -23,6 +40,7 @@ import {
   submitProfile,
 } from "../api/tutorApi";
 import { getSubjects } from "../api/subjectApi";
+import CVUploadModal from "../components/CVUploadModal";
 
 const STEP_META = [
   { id: 1, icon: FiUser },
@@ -31,7 +49,7 @@ const STEP_META = [
   { id: 4, icon: FiShare2 },
 ];
 
-const TIMING_SHIFTS  = ["MORNING", "AFTERNOON", "EVENING", "FLEXIBLE"];
+const TIMING_SHIFTS = ["MORNING", "AFTERNOON", "EVENING", "FLEXIBLE"];
 const TUTORING_STYLES = ["ONE_ON_ONE", "GROUP", "BOTH"];
 
 // ─── Helpers ──────────────────────────────────────────────────
@@ -45,7 +63,10 @@ const FormField = ({ label, required, hint, error, children }) => (
       {label}
       {required && <span className="text-error">*</span>}
       {hint && (
-        <span className="tooltip tooltip-right normal-case font-normal" data-tip={hint}>
+        <span
+          className="tooltip tooltip-right normal-case font-normal"
+          data-tip={hint}
+        >
           <FiInfo size={12} className="text-base-content/30 cursor-help" />
         </span>
       )}
@@ -59,8 +80,10 @@ const FormField = ({ label, required, hint, error, children }) => (
   </div>
 );
 
-const inputCls = "input input-bordered input-sm w-full bg-base-100 focus:input-primary text-base-content";
-const textareaCls = "textarea textarea-bordered textarea-sm w-full bg-base-100 focus:textarea-primary text-base-content min-h-[90px] resize-none";
+const inputCls =
+  "input input-bordered input-sm w-full bg-base-100 focus:input-primary text-base-content";
+const textareaCls =
+  "textarea textarea-bordered textarea-sm w-full bg-base-100 focus:textarea-primary text-base-content min-h-[90px] resize-none";
 const AVATAR_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const AVATAR_MAX_SIZE = 2 * 1024 * 1024;
 
@@ -81,36 +104,70 @@ const showToast = (type, msg) => {
 
 const TutorProfileEdit = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const fileRef = useRef(null);
   const { user, refreshUser } = useAuth();
   const { t } = useTranslation(["profile", "toast", "dashboard"]);
 
   // ── State ─────────────────────────────────────────────────
   const [currentStep, setCurrentStep] = useState(1);
-  const [loading,  setLoading ] = useState(true);
-  const [saving,   setSaving  ] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [profileStatus, setProfileStatus] = useState("PENDING");
   const [avatarPreview, setAvatarPreview] = useState(user?.avatar || "");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [subjectOptions, setSubjectOptions] = useState([]);
   const [subjectsLoading, setSubjectsLoading] = useState(false);
+  const [showCVModal, setShowCVModal] = useState(false);
+
+  // Tự bật modal nếu navigate từ dashboard với ?openCV=true
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("openCV") === "true") {
+      setShowCVModal(true);
+      // Xóa query param khỏi URL để không bật lại khi refresh
+      navigate("/tutor/profile/edit", { replace: true });
+    }
+  }, [location.search]);
 
   // Step 1
-  const [step1, setStep1] = useState({ bio: "", phone: "", address: "", country: "" });
+  const [step1, setStep1] = useState({
+    bio: "",
+    phone: "",
+    address: "",
+    country: "",
+    gender: "",
+  });
   // Step 2
   const [step2, setStep2] = useState({
-    subjects: [], preferredAreas: "", daysPerWeek: "",
-    timingShift: "", pricePerHour: "", tutoringStyle: "",
-    experience: "", tuitionDuration: "", languages: "",
+    subjects: [],
+    preferredAreas: "",
+    daysPerWeek: "",
+    timingShift: "",
+    pricePerHour: "",
+    tutoringStyle: "",
+    experience: "",
+    tuitionDuration: "",
+    languages: "",
   });
   // Step 3
-  const [step3, setStep3]   = useState({ qualification: "", certificate: "" });
+  const [step3, setStep3] = useState({ qualification: "", certificate: "" });
   const [educations, setEducations] = useState([]);
-  const [newEdu, setNewEdu] = useState({ universityName: "", fieldOfStudy: "", passingYear: "", result: "" });
+  const [newEdu, setNewEdu] = useState({
+    universityName: "",
+    fieldOfStudy: "",
+    passingYear: "",
+    result: "",
+  });
   const [addingEdu, setAddingEdu] = useState(false);
   // Step 4
-  const [social, setSocial] = useState({ facebook: "", twitter: "", youtube: "", instagram: "" });
+  const [social, setSocial] = useState({
+    facebook: "",
+    twitter: "",
+    youtube: "",
+    instagram: "",
+  });
 
   // ── Load profile ─────────────────────────────────────────
   useEffect(() => {
@@ -123,28 +180,32 @@ const TutorProfileEdit = () => {
         setProfileStatus(p.status ?? "PENDING");
         setAvatarPreview(p.user?.avatar || "");
         setStep1({
-          bio:     p.bio     ?? "",
-          phone:   p.phone   ?? "",
+          bio: p.bio ?? "",
+          phone: p.phone ?? "",
           address: p.address ?? "",
           country: p.country ?? "",
+          gender: p.user?.gender ?? "",
         });
         setStep2({
-          subjects:        p.subjects        ?? [],
-          preferredAreas:  (p.preferredAreas ?? []).join(", "),
-          daysPerWeek:     p.daysPerWeek     ?? "",
-          timingShift:     p.timingShift     ?? "",
-          pricePerHour:    p.pricePerHour    ?? "",
-          tutoringStyle:   p.tutoringStyle   ?? "",
-          experience:      p.experience      ?? "",
+          subjects: p.subjects ?? [],
+          preferredAreas: (p.preferredAreas ?? []).join(", "),
+          daysPerWeek: p.daysPerWeek ?? "",
+          timingShift: p.timingShift ?? "",
+          pricePerHour: p.pricePerHour ?? "",
+          tutoringStyle: p.tutoringStyle ?? "",
+          experience: p.experience ?? "",
           tuitionDuration: p.tuitionDuration ?? "",
-          languages:       (p.languages      ?? []).join(", "),
+          languages: (p.languages ?? []).join(", "),
         });
-        setStep3({ qualification: p.qualification ?? "", certificate: p.certificate ?? "" });
+        setStep3({
+          qualification: p.qualification ?? "",
+          certificate: p.certificate ?? "",
+        });
         setEducations(p.educations ?? []);
         setSocial({
-          facebook:  p.socialMedia?.facebook  ?? "",
-          twitter:   p.socialMedia?.twitter   ?? "",
-          youtube:   p.socialMedia?.youtube   ?? "",
+          facebook: p.socialMedia?.facebook ?? "",
+          twitter: p.socialMedia?.twitter ?? "",
+          youtube: p.socialMedia?.youtube ?? "",
           instagram: p.socialMedia?.instagram ?? "",
         });
       } catch {
@@ -162,7 +223,9 @@ const TutorProfileEdit = () => {
       setSubjectsLoading(true);
       try {
         const { data } = await getSubjects();
-        const names = (data?.data?.subjects || []).map((subject) => subject.name);
+        const names = (data?.data?.subjects || []).map(
+          (subject) => subject.name,
+        );
         if (!ignore) setSubjectOptions(names);
       } catch (err) {
         if (!ignore) {
@@ -180,7 +243,12 @@ const TutorProfileEdit = () => {
   }, [t]);
 
   // ── Locked guard ─────────────────────────────────────────
-  const isLocked = ["REVIEWING", "APPROVED", "SUSPENDED"].includes(profileStatus);
+  // Step 1 (thông tin cá nhân) vẫn cho sửa khi APPROVED
+  // Các step còn lại lock khi REVIEWING / APPROVED / SUSPENDED
+  const isLocked = ["REVIEWING", "APPROVED", "SUSPENDED"].includes(
+    profileStatus,
+  );
+  const isStep1Locked = ["REVIEWING", "SUSPENDED"].includes(profileStatus);
   const visibleSubjectOptions = Array.from(
     new Set([...subjectOptions, ...step2.subjects]),
   );
@@ -223,7 +291,10 @@ const TutorProfileEdit = () => {
 
   // ── Save handlers ────────────────────────────────────────
   const handleSaveStep = async () => {
-    if (isLocked) return false;
+    // Step 1 chỉ bị block khi REVIEWING/SUSPENDED, không block khi APPROVED
+    // Các step khác block khi isLocked (REVIEWING/APPROVED/SUSPENDED)
+    if (currentStep === 1 && isStep1Locked) return false;
+    if (currentStep !== 1 && isLocked) return false;
     setSaving(true);
     try {
       if (currentStep === 1) {
@@ -231,16 +302,30 @@ const TutorProfileEdit = () => {
       } else if (currentStep === 2) {
         await updateStep2({
           ...step2,
-          preferredAreas: step2.preferredAreas.split(",").map((s) => s.trim()).filter(Boolean),
-          languages:       step2.languages.split(",").map((s) => s.trim()).filter(Boolean),
-          daysPerWeek:     step2.daysPerWeek    ? Number(step2.daysPerWeek)    : undefined,
-          pricePerHour:    step2.pricePerHour   ? Number(step2.pricePerHour)   : undefined,
-          experience:      step2.experience     ? Number(step2.experience)     : undefined,
-          tuitionDuration: step2.tuitionDuration? Number(step2.tuitionDuration): undefined,
+          preferredAreas: step2.preferredAreas
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          languages: step2.languages
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          daysPerWeek: step2.daysPerWeek
+            ? Number(step2.daysPerWeek)
+            : undefined,
+          pricePerHour: step2.pricePerHour
+            ? Number(step2.pricePerHour)
+            : undefined,
+          experience: step2.experience ? Number(step2.experience) : undefined,
+          tuitionDuration: step2.tuitionDuration
+            ? Number(step2.tuitionDuration)
+            : undefined,
         });
       } else if (currentStep === 3) {
         await updateStep3(step3);
-        const hasPendingEducation = Object.values(newEdu).some((value) => String(value).trim());
+        const hasPendingEducation = Object.values(newEdu).some((value) =>
+          String(value).trim(),
+        );
         if (hasPendingEducation) {
           const added = await handleAddEducation();
           if (!added) return false;
@@ -265,15 +350,28 @@ const TutorProfileEdit = () => {
 
   // ── Education handlers ───────────────────────────────────
   const handleAddEducation = async () => {
-    if (!newEdu.universityName || !newEdu.fieldOfStudy || !newEdu.passingYear || !newEdu.result) {
+    if (
+      !newEdu.universityName ||
+      !newEdu.fieldOfStudy ||
+      !newEdu.passingYear ||
+      !newEdu.result
+    ) {
       showToast("error", t("toast:education_fill_all"));
       return false;
     }
     setAddingEdu(true);
     try {
-      const { data } = await addEducation({ ...newEdu, passingYear: Number(newEdu.passingYear) });
+      const { data } = await addEducation({
+        ...newEdu,
+        passingYear: Number(newEdu.passingYear),
+      });
       setEducations((prev) => [...prev, data.data.education]);
-      setNewEdu({ universityName: "", fieldOfStudy: "", passingYear: "", result: "" });
+      setNewEdu({
+        universityName: "",
+        fieldOfStudy: "",
+        passingYear: "",
+        result: "",
+      });
       showToast("success", t("toast:education_added"));
       return true;
     } catch (err) {
@@ -309,6 +407,61 @@ const TutorProfileEdit = () => {
     }
   };
 
+  const handleCVApply = ({ step1, step2, step3, educations, missing }) => {
+    // Merge step1 — chỉ ghi đè trường còn trống
+    setStep1((prev) => ({
+      bio: step1?.bio || prev.bio,
+      phone: step1?.phone || prev.phone,
+      address: step1?.address || prev.address,
+      country: step1?.country || prev.country,
+      gender: step1?.gender || prev.gender,
+    }));
+
+    // Merge step2
+    setStep2((prev) => ({
+      subjects:
+        (step2?.subjects?.length ? step2.subjects : null) ?? prev.subjects,
+      preferredAreas: step2?.preferredAreas ?? prev.preferredAreas,
+      daysPerWeek: step2?.daysPerWeek ?? prev.daysPerWeek,
+      timingShift: step2?.timingShift ?? prev.timingShift,
+      pricePerHour: step2?.pricePerHour ?? prev.pricePerHour,
+      tutoringStyle: step2?.tutoringStyle ?? prev.tutoringStyle,
+      experience: step2?.experience ?? prev.experience,
+      tuitionDuration: step2?.tuitionDuration ?? prev.tuitionDuration,
+      languages: step2?.languages ?? prev.languages,
+    }));
+
+    // Merge step3
+    setStep3((prev) => ({
+      qualification: step3?.qualification ?? prev.qualification,
+      certificate: step3?.certificate ?? prev.certificate,
+    }));
+
+    // Thêm education nếu có (không ghi đè list hiện tại, chỉ seed khi trống)
+    if (educations?.length > 0 && educations.length === 0) {
+      // Note: educations được lưu qua API riêng (addEducation).
+      // Ở đây chỉ pre-fill newEdu với mục đầu tiên để user confirm rồi bấm thêm.
+      const first = educations[0];
+      setNewEdu({
+        universityName: first.universityName ?? "",
+        fieldOfStudy: first.fieldOfStudy ?? "",
+        passingYear: String(first.passingYear ?? ""),
+        result: first.result ?? "",
+      });
+    }
+
+    if (missing?.length > 0) {
+      showToast(
+        "default",
+        `AI đã điền ${
+          Object.values({ ...step1, ...step2, ...step3 }).filter(Boolean).length
+        } trường. Còn ${missing.length} trường cần điền thêm.`,
+      );
+    } else {
+      showToast("success", "AI đã điền đầy đủ thông tin từ CV!");
+    }
+  };
+
   // ── Subject toggle ───────────────────────────────────────
   const toggleSubject = (sub) => {
     setStep2((prev) => ({
@@ -324,7 +477,6 @@ const TutorProfileEdit = () => {
   // ─────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-base-200">
-
       {/* Hero */}
       <div className="relative bg-primary overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
@@ -335,32 +487,53 @@ const TutorProfileEdit = () => {
           <p className="text-primary-content/60 text-xs font-semibold uppercase tracking-[0.2em]">
             {t("profile:portal")}
           </p>
-          <h1 className="text-primary-content text-3xl font-bold">{t("profile:title")}</h1>
+          <h1 className="text-primary-content text-3xl font-bold">
+            {t("profile:title")}
+          </h1>
+          {!isLocked && (
+            <button
+              type="button"
+              onClick={() => setShowCVModal(true)}
+              className="btn btn-sm bg-white/15 hover:bg-white/25 text-primary-content border-white/20 gap-2 mt-3"
+            >
+              <FiZap size={13} />
+              Điền nhanh bằng AI (Upload CV)
+            </button>
+          )}
         </div>
       </div>
 
       {/* Locked banner */}
       {!loading && isLocked && (
         <div className="max-w-3xl mx-auto px-4 mt-6">
-          <div className="alert alert-warning rounded-2xl shadow-sm">
-            <FiAlertCircle size={16} />
-            <span>
-              <Trans
-                i18nKey="profile:locked"
-                values={{
-                  status: t(`dashboard:profile_status.${profileStatus}`, {
-                    defaultValue: profileStatus,
-                  }),
-                }}
-                components={{ strong: <strong /> }}
-              />
-            </span>
-          </div>
+          {profileStatus === "APPROVED" ? (
+            <div className="alert alert-info rounded-2xl shadow-sm">
+              <FiInfo size={16} />
+              <span>
+                Hồ sơ đã được <strong>phê duyệt</strong>. Bạn chỉ có thể chỉnh
+                sửa thông tin cá nhân (Bước 1). Các bước khác đã bị khóa.
+              </span>
+            </div>
+          ) : (
+            <div className="alert alert-warning rounded-2xl shadow-sm">
+              <FiAlertCircle size={16} />
+              <span>
+                <Trans
+                  i18nKey="profile:locked"
+                  values={{
+                    status: t(`dashboard:profile_status.${profileStatus}`, {
+                      defaultValue: profileStatus,
+                    }),
+                  }}
+                  components={{ strong: <strong /> }}
+                />
+              </span>
+            </div>
+          )}
         </div>
       )}
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 pb-20">
-
         {/* ── Step indicator ─────────────────────────────── */}
         <div className="bg-base-100 rounded-2xl border border-base-300 shadow-sm p-4 mb-6">
           <ul className="steps steps-horizontal w-full">
@@ -380,7 +553,6 @@ const TutorProfileEdit = () => {
 
         {/* ── Form card ──────────────────────────────────── */}
         <div className="bg-base-100 rounded-2xl border border-base-300 shadow-sm overflow-hidden">
-
           {/* Card header */}
           <div className="h-1 w-full bg-primary" />
           <div className="px-6 py-5 border-b border-base-200 flex items-center gap-3">
@@ -430,7 +602,9 @@ const TutorProfileEdit = () => {
                         </div>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-base-content">{user?.name || "Gia sư"}</p>
+                        <p className="font-semibold text-base-content">
+                          {user?.name || "Gia sư"}
+                        </p>
                         <p className="text-xs text-base-content/50">
                           JPG, JPEG, PNG hoặc WEBP. Tối đa 2MB.
                         </p>
@@ -457,41 +631,58 @@ const TutorProfileEdit = () => {
                       </button>
                     </div>
 
-                    <FormField label={t("profile:fields.bio")} hint={t("profile:fields.bio_hint")}>
+                    <FormField
+                      label={t("profile:fields.bio")}
+                      hint={t("profile:fields.bio_hint")}
+                    >
                       <textarea
                         className={textareaCls}
                         placeholder={t("profile:fields.bio_placeholder")}
                         value={step1.bio}
-                        onChange={(e) => setStep1({ ...step1, bio: e.target.value })}
-                        disabled={isLocked}
+                        onChange={(e) =>
+                          setStep1({ ...step1, bio: e.target.value })
+                        }
+                        disabled={isStep1Locked}
                       />
                     </FormField>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField label={t("profile:fields.phone")} required>
                         <label className="input input-bordered input-sm flex items-center gap-2 bg-base-100 focus-within:border-primary">
-                          <FiPhone size={14} className="text-base-content/40 shrink-0" />
+                          <FiPhone
+                            size={14}
+                            className="text-base-content/40 shrink-0"
+                          />
                           <input
                             type="tel"
                             className="grow text-sm bg-transparent outline-none"
                             placeholder={t("profile:fields.phone_placeholder")}
                             value={step1.phone}
-                            onChange={(e) => setStep1({ ...step1, phone: e.target.value })}
-                            disabled={isLocked}
+                            onChange={(e) =>
+                              setStep1({ ...step1, phone: e.target.value })
+                            }
+                            disabled={isStep1Locked}
                           />
                         </label>
                       </FormField>
 
                       <FormField label={t("profile:fields.country")}>
                         <label className="input input-bordered input-sm flex items-center gap-2 bg-base-100 focus-within:border-primary">
-                          <FiGlobe size={14} className="text-base-content/40 shrink-0" />
+                          <FiGlobe
+                            size={14}
+                            className="text-base-content/40 shrink-0"
+                          />
                           <input
                             type="text"
                             className="grow text-sm bg-transparent outline-none"
-                            placeholder={t("profile:fields.country_placeholder")}
+                            placeholder={t(
+                              "profile:fields.country_placeholder",
+                            )}
                             value={step1.country}
-                            onChange={(e) => setStep1({ ...step1, country: e.target.value })}
-                            disabled={isLocked}
+                            onChange={(e) =>
+                              setStep1({ ...step1, country: e.target.value })
+                            }
+                            disabled={isStep1Locked}
                           />
                         </label>
                       </FormField>
@@ -499,16 +690,37 @@ const TutorProfileEdit = () => {
 
                     <FormField label={t("profile:fields.address")}>
                       <label className="input input-bordered input-sm flex items-center gap-2 bg-base-100 focus-within:border-primary">
-                        <FiMapPin size={14} className="text-base-content/40 shrink-0" />
+                        <FiMapPin
+                          size={14}
+                          className="text-base-content/40 shrink-0"
+                        />
                         <input
                           type="text"
                           className="grow text-sm bg-transparent outline-none"
                           placeholder={t("profile:fields.address_placeholder")}
                           value={step1.address}
-                          onChange={(e) => setStep1({ ...step1, address: e.target.value })}
-                          disabled={isLocked}
+                          onChange={(e) =>
+                            setStep1({ ...step1, address: e.target.value })
+                          }
+                          disabled={isStep1Locked}
                         />
                       </label>
+                    </FormField>
+
+                    <FormField label={t("profile:fields.gender")}>
+                      <select
+                        className="select select-bordered select-sm w-full bg-base-100 focus:select-primary"
+                        value={step1.gender}
+                        onChange={(e) =>
+                          setStep1({ ...step1, gender: e.target.value })
+                        }
+                        disabled={isStep1Locked}
+                      >
+                        <option value="">Chọn giới tính</option>
+                        <option value="MALE">Nam</option>
+                        <option value="FEMALE">Nữ</option>
+                        <option value="OTHER">Khác</option>
+                      </select>
                     </FormField>
                   </div>
                 )}
@@ -523,11 +735,14 @@ const TutorProfileEdit = () => {
                       hint={t("profile:fields.subjects_hint")}
                     >
                       <div className="flex flex-wrap gap-2 p-3 rounded-xl border border-base-300 bg-base-200/40 min-h-[52px]">
-                        {subjectsLoading && visibleSubjectOptions.length === 0 && (
-                          <span className="text-xs text-base-content/50">
-                            {t("profile:fields.subjects_loading", { defaultValue: "Loading subjects..." })}
-                          </span>
-                        )}
+                        {subjectsLoading &&
+                          visibleSubjectOptions.length === 0 && (
+                            <span className="text-xs text-base-content/50">
+                              {t("profile:fields.subjects_loading", {
+                                defaultValue: "Loading subjects...",
+                              })}
+                            </span>
+                          )}
                         {visibleSubjectOptions.map((sub) => (
                           <button
                             key={sub}
@@ -546,16 +761,28 @@ const TutorProfileEdit = () => {
                     </FormField>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormField label={t("profile:fields.tutoring_style")} required>
+                      <FormField
+                        label={t("profile:fields.tutoring_style")}
+                        required
+                      >
                         <select
                           className="select select-bordered select-sm w-full bg-base-100 focus:select-primary"
                           value={step2.tutoringStyle}
-                          onChange={(e) => setStep2({ ...step2, tutoringStyle: e.target.value })}
+                          onChange={(e) =>
+                            setStep2({
+                              ...step2,
+                              tutoringStyle: e.target.value,
+                            })
+                          }
                           disabled={isLocked}
                         >
-                          <option value="">{t("profile:fields.select_style")}</option>
+                          <option value="">
+                            {t("profile:fields.select_style")}
+                          </option>
                           {TUTORING_STYLES.map((s) => (
-                            <option key={s} value={s}>{t(`profile:style.${s}`)}</option>
+                            <option key={s} value={s}>
+                              {t(`profile:style.${s}`)}
+                            </option>
                           ))}
                         </select>
                       </FormField>
@@ -564,25 +791,43 @@ const TutorProfileEdit = () => {
                         <select
                           className="select select-bordered select-sm w-full bg-base-100 focus:select-primary"
                           value={step2.timingShift}
-                          onChange={(e) => setStep2({ ...step2, timingShift: e.target.value })}
+                          onChange={(e) =>
+                            setStep2({ ...step2, timingShift: e.target.value })
+                          }
                           disabled={isLocked}
                         >
-                          <option value="">{t("profile:fields.select_shift")}</option>
+                          <option value="">
+                            {t("profile:fields.select_shift")}
+                          </option>
                           {TIMING_SHIFTS.map((s) => (
-                            <option key={s} value={s}>{t(`profile:timing.${s}`)}</option>
+                            <option key={s} value={s}>
+                              {t(`profile:timing.${s}`)}
+                            </option>
                           ))}
                         </select>
                       </FormField>
 
-                      <FormField label={t("profile:fields.price_hour")} required>
+                      <FormField
+                        label={t("profile:fields.price_hour")}
+                        required
+                      >
                         <label className="input input-bordered input-sm flex items-center gap-2 bg-base-100 focus-within:border-primary">
-                          <FiDollarSign size={14} className="text-base-content/40 shrink-0" />
+                          <FiDollarSign
+                            size={14}
+                            className="text-base-content/40 shrink-0"
+                          />
                           <input
-                            type="number" min={0}
+                            type="number"
+                            min={0}
                             className="grow text-sm bg-transparent outline-none"
                             placeholder="0.00"
                             value={step2.pricePerHour}
-                            onChange={(e) => setStep2({ ...step2, pricePerHour: e.target.value })}
+                            onChange={(e) =>
+                              setStep2({
+                                ...step2,
+                                pricePerHour: e.target.value,
+                              })
+                            }
                             disabled={isLocked}
                           />
                         </label>
@@ -590,13 +835,23 @@ const TutorProfileEdit = () => {
 
                       <FormField label={t("profile:fields.days_week")}>
                         <label className="input input-bordered input-sm flex items-center gap-2 bg-base-100 focus-within:border-primary">
-                          <FiClock size={14} className="text-base-content/40 shrink-0" />
+                          <FiClock
+                            size={14}
+                            className="text-base-content/40 shrink-0"
+                          />
                           <input
-                            type="number" min={1} max={7}
+                            type="number"
+                            min={1}
+                            max={7}
                             className="grow text-sm bg-transparent outline-none"
                             placeholder={t("profile:fields.days_placeholder")}
                             value={step2.daysPerWeek}
-                            onChange={(e) => setStep2({ ...step2, daysPerWeek: e.target.value })}
+                            onChange={(e) =>
+                              setStep2({
+                                ...step2,
+                                daysPerWeek: e.target.value,
+                              })
+                            }
                             disabled={isLocked}
                           />
                         </label>
@@ -604,22 +859,33 @@ const TutorProfileEdit = () => {
 
                       <FormField label={t("profile:fields.experience")}>
                         <input
-                          type="number" min={0}
+                          type="number"
+                          min={0}
                           className={inputCls}
-                          placeholder={t("profile:fields.experience_placeholder")}
+                          placeholder={t(
+                            "profile:fields.experience_placeholder",
+                          )}
                           value={step2.experience}
-                          onChange={(e) => setStep2({ ...step2, experience: e.target.value })}
+                          onChange={(e) =>
+                            setStep2({ ...step2, experience: e.target.value })
+                          }
                           disabled={isLocked}
                         />
                       </FormField>
 
                       <FormField label={t("profile:fields.tuition_duration")}>
                         <input
-                          type="number" min={1}
+                          type="number"
+                          min={1}
                           className={inputCls}
                           placeholder={t("profile:fields.tuition_placeholder")}
                           value={step2.tuitionDuration}
-                          onChange={(e) => setStep2({ ...step2, tuitionDuration: e.target.value })}
+                          onChange={(e) =>
+                            setStep2({
+                              ...step2,
+                              tuitionDuration: e.target.value,
+                            })
+                          }
                           disabled={isLocked}
                         />
                       </FormField>
@@ -632,9 +898,13 @@ const TutorProfileEdit = () => {
                       <input
                         type="text"
                         className={inputCls}
-                        placeholder={t("profile:fields.preferred_areas_placeholder")}
+                        placeholder={t(
+                          "profile:fields.preferred_areas_placeholder",
+                        )}
                         value={step2.preferredAreas}
-                        onChange={(e) => setStep2({ ...step2, preferredAreas: e.target.value })}
+                        onChange={(e) =>
+                          setStep2({ ...step2, preferredAreas: e.target.value })
+                        }
                         disabled={isLocked}
                       />
                     </FormField>
@@ -648,7 +918,9 @@ const TutorProfileEdit = () => {
                         className={inputCls}
                         placeholder={t("profile:fields.languages_placeholder")}
                         value={step2.languages}
-                        onChange={(e) => setStep2({ ...step2, languages: e.target.value })}
+                        onChange={(e) =>
+                          setStep2({ ...step2, languages: e.target.value })
+                        }
                         disabled={isLocked}
                       />
                     </FormField>
@@ -659,13 +931,23 @@ const TutorProfileEdit = () => {
                 {currentStep === 3 && (
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormField label={t("profile:fields.qualification")} required>
+                      <FormField
+                        label={t("profile:fields.qualification")}
+                        required
+                      >
                         <input
                           type="text"
                           className={inputCls}
-                          placeholder={t("profile:fields.qualification_placeholder")}
+                          placeholder={t(
+                            "profile:fields.qualification_placeholder",
+                          )}
                           value={step3.qualification}
-                          onChange={(e) => setStep3({ ...step3, qualification: e.target.value })}
+                          onChange={(e) =>
+                            setStep3({
+                              ...step3,
+                              qualification: e.target.value,
+                            })
+                          }
                           disabled={isLocked}
                         />
                       </FormField>
@@ -677,9 +959,13 @@ const TutorProfileEdit = () => {
                         <input
                           type="text"
                           className={inputCls}
-                          placeholder={t("profile:fields.certificate_placeholder")}
+                          placeholder={t(
+                            "profile:fields.certificate_placeholder",
+                          )}
                           value={step3.certificate}
-                          onChange={(e) => setStep3({ ...step3, certificate: e.target.value })}
+                          onChange={(e) =>
+                            setStep3({ ...step3, certificate: e.target.value })
+                          }
                           disabled={isLocked}
                         />
                       </FormField>
@@ -703,7 +989,8 @@ const TutorProfileEdit = () => {
                                   {edu.universityName}
                                 </p>
                                 <p className="text-xs text-base-content/50 mt-0.5">
-                                  {edu.fieldOfStudy} · {edu.passingYear} · {edu.result}
+                                  {edu.fieldOfStudy} · {edu.passingYear} ·{" "}
+                                  {edu.result}
                                 </p>
                               </div>
                               {!isLocked && (
@@ -736,28 +1023,45 @@ const TutorProfileEdit = () => {
                               className={inputCls}
                               placeholder={t("profile:fields.university")}
                               value={newEdu.universityName}
-                              onChange={(e) => setNewEdu({ ...newEdu, universityName: e.target.value })}
+                              onChange={(e) =>
+                                setNewEdu({
+                                  ...newEdu,
+                                  universityName: e.target.value,
+                                })
+                              }
                             />
                             <input
                               type="text"
                               className={inputCls}
                               placeholder={t("profile:fields.field")}
                               value={newEdu.fieldOfStudy}
-                              onChange={(e) => setNewEdu({ ...newEdu, fieldOfStudy: e.target.value })}
+                              onChange={(e) =>
+                                setNewEdu({
+                                  ...newEdu,
+                                  fieldOfStudy: e.target.value,
+                                })
+                              }
                             />
                             <input
                               type="number"
                               className={inputCls}
                               placeholder={t("profile:fields.passing_year")}
                               value={newEdu.passingYear}
-                              onChange={(e) => setNewEdu({ ...newEdu, passingYear: e.target.value })}
+                              onChange={(e) =>
+                                setNewEdu({
+                                  ...newEdu,
+                                  passingYear: e.target.value,
+                                })
+                              }
                             />
                             <input
                               type="text"
                               className={inputCls}
                               placeholder={t("profile:fields.result")}
                               value={newEdu.result}
-                              onChange={(e) => setNewEdu({ ...newEdu, result: e.target.value })}
+                              onChange={(e) =>
+                                setNewEdu({ ...newEdu, result: e.target.value })
+                              }
                             />
                           </div>
                           <button
@@ -783,20 +1087,48 @@ const TutorProfileEdit = () => {
                 {currentStep === 4 && (
                   <div className="space-y-4">
                     {[
-                      { key: "facebook", labelKey: "facebook", icon: FiFacebook, placeholderKey: "facebook_placeholder" },
-                      { key: "twitter", labelKey: "twitter", icon: FiTwitter, placeholderKey: "twitter_placeholder" },
-                      { key: "youtube", labelKey: "youtube", icon: FiYoutube, placeholderKey: "youtube_placeholder" },
-                      { key: "instagram", labelKey: "instagram", icon: FiInstagram, placeholderKey: "instagram_placeholder" },
+                      {
+                        key: "facebook",
+                        labelKey: "facebook",
+                        icon: FiFacebook,
+                        placeholderKey: "facebook_placeholder",
+                      },
+                      {
+                        key: "twitter",
+                        labelKey: "twitter",
+                        icon: FiTwitter,
+                        placeholderKey: "twitter_placeholder",
+                      },
+                      {
+                        key: "youtube",
+                        labelKey: "youtube",
+                        icon: FiYoutube,
+                        placeholderKey: "youtube_placeholder",
+                      },
+                      {
+                        key: "instagram",
+                        labelKey: "instagram",
+                        icon: FiInstagram,
+                        placeholderKey: "instagram_placeholder",
+                      },
                     ].map(({ key, labelKey, icon: Icon, placeholderKey }) => (
-                      <FormField key={key} label={t(`profile:fields.${labelKey}`)}>
+                      <FormField
+                        key={key}
+                        label={t(`profile:fields.${labelKey}`)}
+                      >
                         <label className="input input-bordered input-sm flex items-center gap-2 bg-base-100 focus-within:border-primary">
-                          <Icon size={14} className="text-base-content/40 shrink-0" />
+                          <Icon
+                            size={14}
+                            className="text-base-content/40 shrink-0"
+                          />
                           <input
                             type="url"
                             className="grow text-sm bg-transparent outline-none"
                             placeholder={t(`profile:fields.${placeholderKey}`)}
                             value={social[key]}
-                            onChange={(e) => setSocial({ ...social, [key]: e.target.value })}
+                            onChange={(e) =>
+                              setSocial({ ...social, [key]: e.target.value })
+                            }
                             disabled={isLocked}
                           />
                         </label>
@@ -807,7 +1139,10 @@ const TutorProfileEdit = () => {
                     {!isLocked && (
                       <div className="mt-6 p-4 rounded-2xl bg-success/10 border border-success/20">
                         <div className="flex items-start gap-3">
-                          <FiCheckCircle className="text-success shrink-0 mt-0.5" size={16} />
+                          <FiCheckCircle
+                            className="text-success shrink-0 mt-0.5"
+                            size={16}
+                          />
                           <div className="flex-1">
                             <p className="font-semibold text-base-content text-sm">
                               {t("profile:submit.ready_title")}
@@ -822,9 +1157,11 @@ const TutorProfileEdit = () => {
                                 disabled={saving}
                                 className="btn btn-outline btn-success btn-sm gap-2"
                               >
-                                {saving
-                                  ? <span className="loading loading-spinner loading-xs" />
-                                  : <FiCheckCircle size={13} />}
+                                {saving ? (
+                                  <span className="loading loading-spinner loading-xs" />
+                                ) : (
+                                  <FiCheckCircle size={13} />
+                                )}
                                 {t("profile:submit.save")}
                               </button>
                               <button
@@ -833,9 +1170,11 @@ const TutorProfileEdit = () => {
                                 disabled={submitLoading}
                                 className="btn btn-success btn-sm gap-2"
                               >
-                                {submitLoading
-                                  ? <span className="loading loading-spinner loading-xs" />
-                                  : <FiSend size={13} />}
+                                {submitLoading ? (
+                                  <span className="loading loading-spinner loading-xs" />
+                                ) : (
+                                  <FiSend size={13} />
+                                )}
                                 {t("profile:submit.submit_review")}
                               </button>
                             </div>
@@ -873,22 +1212,41 @@ const TutorProfileEdit = () => {
                 )}
 
                 {currentStep < STEP_META.length ? (
-                  <button
-                    type="button"
-                    onClick={handleSaveAndNext}
-                    disabled={saving || addingEdu || isLocked}
-                    className="btn btn-primary btn-sm gap-1"
-                  >
-                    {saving
-                      ? <span className="loading loading-spinner loading-xs" />
-                      : (
+                  // Khi APPROVED ở step 1: chỉ show nút Save (không Save & Next)
+                  currentStep === 1 && profileStatus === "APPROVED" ? (
+                    <button
+                      type="button"
+                      onClick={handleSaveStep}
+                      disabled={saving}
+                      className="btn btn-primary btn-sm gap-1"
+                    >
+                      {saving ? (
+                        <span className="loading loading-spinner loading-xs" />
+                      ) : (
+                        <FiCheckCircle size={14} />
+                      )}
+                      {t("profile:submit.save")}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleSaveAndNext}
+                      disabled={saving || addingEdu || isLocked}
+                      className="btn btn-primary btn-sm gap-1"
+                    >
+                      {saving ? (
+                        <span className="loading loading-spinner loading-xs" />
+                      ) : (
                         <>
-                          {t("profile:nav.save_next")} <FiChevronRight size={14} />
+                          {t("profile:nav.save_next")}{" "}
+                          <FiChevronRight size={14} />
                         </>
                       )}
-                  </button>
+                    </button>
+                  )
                 ) : (
-                  currentStep === STEP_META.length && isLocked && (
+                  currentStep === STEP_META.length &&
+                  isLocked && (
                     <button
                       type="button"
                       onClick={() => navigate("/tutor/dashboard")}
@@ -903,6 +1261,12 @@ const TutorProfileEdit = () => {
           )}
         </div>
       </div>
+      {showCVModal && (
+        <CVUploadModal
+          onClose={() => setShowCVModal(false)}
+          onApply={handleCVApply}
+        />
+      )}
     </div>
   );
 };

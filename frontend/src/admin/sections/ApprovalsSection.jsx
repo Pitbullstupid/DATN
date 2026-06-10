@@ -1,23 +1,35 @@
 import { useState } from "react";
-import { FiCheckCircle, FiClock, FiEye, FiCheck, FiXCircle } from "react-icons/fi";
+import {
+  FiCheckCircle,
+  FiClock,
+  FiEye,
+  FiCheck,
+  FiXCircle,
+} from "react-icons/fi";
 import { adminApi } from "../../api/adminApi";
 import { useAdminData } from "../../hook/useAdminData";
 import { Spinner, ErrorBox, Pagination } from "../shared";
 import { TUTOR_STATUS, fmtDate, avatar } from "../shared/statusMaps";
 import TutorDetailModal from "./TutorDetailModal";
+import AiReviewButton from "../../components/AiReviewButton"; // hoặc đường dẫn đúng
 
 export default function ApprovalsSection() {
-  const [page, setPage]           = useState(1);
+  const [page, setPage] = useState(1);
   const [actionLoading, setActionLoading] = useState(null); // "id_approve" | "id_reject"
-  const [rejectNote, setRejectNote]       = useState({});   // { [id]: string }
-  const [viewingId, setViewingId]         = useState(null); // tutorProfileId cho modal
+  const [rejectNote, setRejectNote] = useState({}); // { [id]: string }
+  const [viewingId, setViewingId] = useState(null); // tutorProfileId cho modal
 
-  const { data, error, reload, loading: fetching } = useAdminData(
+  const {
+    data,
+    error,
+    reload,
+    loading: fetching,
+  } = useAdminData(
     () => adminApi.getTutorApprovals({ page, limit: 12 }),
     [page],
   );
 
-  const profiles   = data?.profiles ?? [];
+  const profiles = data?.profiles ?? [];
   const pagination = data?.pagination;
 
   const handleApprove = async (id) => {
@@ -25,8 +37,11 @@ export default function ApprovalsSection() {
     try {
       await adminApi.approveTutor(id);
       reload();
-    } catch (err) { alert(err.message); }
-    finally { setActionLoading(null); }
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const handleReject = async (id) => {
@@ -34,8 +49,23 @@ export default function ApprovalsSection() {
     try {
       await adminApi.rejectTutor(id, rejectNote[id] ?? "");
       reload();
-    } catch (err) { alert(err.message); }
-    finally { setActionLoading(null); }
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+  const handleAiSuggest = (tutorId, aiResult) => {
+    if (
+      (aiResult.decision === "REJECT" ||
+        aiResult.decision === "NEEDS_REVIEW") &&
+      aiResult.adminNote
+    ) {
+      setRejectNote((prev) => ({
+        ...prev,
+        [tutorId]: prev[tutorId] || aiResult.adminNote, // chỉ điền nếu admin chưa gõ
+      }));
+    }
   };
 
   if (fetching) return <Spinner />;
@@ -44,7 +74,9 @@ export default function ApprovalsSection() {
     <>
       <div className="space-y-5">
         <div>
-          <h2 className="text-xl font-bold text-base-content">Duyệt hồ sơ gia sư</h2>
+          <h2 className="text-xl font-bold text-base-content">
+            Duyệt hồ sơ gia sư
+          </h2>
           <p className="text-sm text-base-content/50">
             {pagination?.total ?? 0} hồ sơ đang chờ xử lý
           </p>
@@ -72,8 +104,12 @@ export default function ApprovalsSection() {
                     alt=""
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm text-base-content">{a.user.name}</p>
-                    <p className="text-xs text-base-content/50">{a.user.email}</p>
+                    <p className="font-semibold text-sm text-base-content">
+                      {a.user.name}
+                    </p>
+                    <p className="text-xs text-base-content/50">
+                      {a.user.email}
+                    </p>
                     <p className="text-xs text-base-content/50 mt-0.5">
                       Môn:{" "}
                       <span className="font-medium text-base-content">
@@ -81,7 +117,9 @@ export default function ApprovalsSection() {
                       </span>
                     </p>
                   </div>
-                  <span className={`badge ${TUTOR_STATUS[a.status]?.badge} badge-sm shrink-0`}>
+                  <span
+                    className={`badge ${TUTOR_STATUS[a.status]?.badge} badge-sm shrink-0`}
+                  >
                     {TUTOR_STATUS[a.status]?.label}
                   </span>
                 </div>
@@ -102,13 +140,20 @@ export default function ApprovalsSection() {
                 {/* Actions */}
                 {!isDone && (
                   <>
+                    <AiReviewButton
+                      profile={a}
+                      onSuggest={(result) => handleAiSuggest(a.id, result)}
+                    />
                     <textarea
                       className="textarea textarea-bordered textarea-xs w-full mb-2 text-xs resize-none"
                       placeholder="Lý do từ chối (để trống nếu duyệt)…"
                       rows={2}
                       value={rejectNote[a.id] ?? ""}
                       onChange={(e) =>
-                        setRejectNote((prev) => ({ ...prev, [a.id]: e.target.value }))
+                        setRejectNote((prev) => ({
+                          ...prev,
+                          [a.id]: e.target.value,
+                        }))
                       }
                     />
                     <div className="flex gap-2">

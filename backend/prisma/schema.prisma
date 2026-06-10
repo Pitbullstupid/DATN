@@ -195,6 +195,7 @@ model TutorProfile {
   courses         CourseClass[]
   payments        Payment[]
   wallet          TutorWallet?
+  bankAccounts    BankAccount[]
 
   @@map("tutor_profiles")
 }
@@ -469,6 +470,14 @@ model Withdrawal {
   amount Float
   status WithdrawStatus @default(PENDING)
 
+  // Tài khoản ngân hàng gia sư muốn nhận tiền
+  bankAccountId String?
+  bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id])
+
+  // Snapshot thông tin ngân hàng tại thời điểm rút
+  // (phòng trường hợp gia sư sau đó xoá tài khoản)
+  bankSnapshot  Json?
+
   // Stripe Payout
   stripePayoutId String?
 
@@ -476,6 +485,28 @@ model Withdrawal {
   completedAt DateTime?
 
   @@map("withdrawals")
+}
+
+// ================== BANK ACCOUNT ==================
+// Tài khoản ngân hàng của gia sư để nhận tiền rút
+
+model BankAccount {
+  id             String       @id @default(uuid())
+  tutorProfileId String
+  tutorProfile   TutorProfile @relation(fields: [tutorProfileId], references: [id], onDelete: Cascade)
+
+  bankName       String   // Tên ngân hàng (VD: Vietcombank, Techcombank)
+  accountNumber  String   // Số tài khoản
+  accountHolder  String   // Tên chủ tài khoản
+  branch         String?  // Chi nhánh (tuỳ chọn)
+  isDefault      Boolean  @default(false) // Tài khoản mặc định
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  withdrawals Withdrawal[]
+
+  @@map("bank_accounts")
 }
 
 model Notification {

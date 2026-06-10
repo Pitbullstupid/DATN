@@ -67,7 +67,9 @@ const EduCard = ({ edu }) => {
         <p className="font-semibold text-base-content text-sm">
           {edu.universityName}
         </p>
-        <p className="text-base-content/60 text-xs mt-0.5">{edu.fieldOfStudy}</p>
+        <p className="text-base-content/60 text-xs mt-0.5">
+          {edu.fieldOfStudy}
+        </p>
         <p className="text-base-content/40 text-xs mt-1">
           {t("detail.result")} : {edu.result} &nbsp; {t("detail.pass_year")} :{" "}
           {edu.passingYear}
@@ -211,9 +213,16 @@ export default function TutorDetailPage() {
     : null;
   const styleLabel = styleKey ? t(styleKey) : null;
 
+  const GENDER_LABELS = {
+    MALE: "Nam",
+    FEMALE: "Nữ",
+    OTHER: "Khác",
+  };
+
   const openModal = () => {
     document.getElementById("modal_request_tutor").showModal();
   };
+  console.log("Profile data:", user, profile);
 
   return (
     <div className="min-h-screen bg-base-200">
@@ -381,10 +390,7 @@ export default function TutorDetailPage() {
                     label={t("detail.experience")}
                     value={experienceYears}
                   />
-                  <InfoRow
-                    label={t("detail.duration")}
-                    value={tuitionHours}
-                  />
+                  <InfoRow label={t("detail.duration")} value={tuitionHours} />
                   <InfoRow
                     label={t("detail.preferred_area")}
                     value={
@@ -475,7 +481,14 @@ export default function TutorDetailPage() {
                 <InfoRow label={t("detail.phone")} value={profile.phone} />
                 <InfoRow label={t("detail.address")} value={profile.address} />
                 <InfoRow label={t("detail.country")} value={profile.country} />
-                <InfoRow label={t("detail.gender")} value={user?.gender} />
+                <InfoRow
+                  label={t("detail.gender")}
+                  value={
+                    user?.gender
+                      ? (GENDER_LABELS[user.gender] ?? user.gender)
+                      : null
+                  }
+                />
                 {profile.bio && (
                   <div className="py-3">
                     <p className="text-base-content/50 text-sm mb-1">
@@ -649,7 +662,9 @@ export default function TutorDetailPage() {
             </div>
 
             <div className="bg-primary rounded-2xl p-5 text-primary-content">
-              <p className="font-bold text-sm mb-1">{t("detail.ready_title")}</p>
+              <p className="font-bold text-sm mb-1">
+                {t("detail.ready_title")}
+              </p>
               <p className="text-xs opacity-80 mb-4">
                 {t("detail.ready_desc", {
                   name: user?.name?.split(" ")[0] || user?.name,

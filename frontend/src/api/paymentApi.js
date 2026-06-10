@@ -18,6 +18,24 @@ export const paymentApi = {
     axiosInstance.get("/payments/wallet"),
 
   /** Tutor yêu cầu rút tiền */
-  requestWithdrawal: (amount) =>
-    axiosInstance.post("/payments/withdraw", { amount }),
+  requestWithdrawal: (amount, bankAccountId) =>
+    axiosInstance.post("/payments/withdraw", { amount, bankAccountId }),
+
+  // ── Bank accounts ──────────────────────────────────────────
+
+  /** Lấy danh sách tài khoản ngân hàng */
+  getBankAccounts: () =>
+    axiosInstance.get("/payments/bank-accounts"),
+
+  /** Thêm tài khoản ngân hàng mới */
+  createBankAccount: (data) =>
+    axiosInstance.post("/payments/bank-accounts", data),
+
+  /** Cập nhật tài khoản ngân hàng */
+  updateBankAccount: (id, data) =>
+    axiosInstance.patch(`/payments/bank-accounts/${id}`, data),
+
+  /** Xoá tài khoản ngân hàng */
+  deleteBankAccount: (id) =>
+    axiosInstance.delete(`/payments/bank-accounts/${id}`),
 };

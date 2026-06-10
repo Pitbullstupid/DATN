@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import { Toaster } from "react-hot-toast";
 import { FcGoogle } from "react-icons/fc";
 import { useTranslation } from "react-i18next";
-
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 const ModalLogin = ({ mode, onSwitchMode }) => {
   const { login, register, user } = useAuth();
   const { t } = useTranslation(["home", "common", "toast"]);
@@ -18,6 +18,8 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
     role: "STUDENT",
   });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -53,7 +55,7 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
         try {
           const response = await login(
             { email: form.email, password: form.password },
-            rememberMe
+            rememberMe,
           );
 
           // Lấy message từ API response (hoặc fallback i18n)
@@ -63,8 +65,8 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
         } catch (error) {
           // Lấy message từ API backend
           const errorMessage =
-            error.response?.data?.message || 
-            error.message || 
+            error.response?.data?.message ||
+            error.message ||
             t("toast:login_failed");
           toast.error(errorMessage, { id: toastId });
           console.error("Login error:", error);
@@ -82,14 +84,15 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
           });
 
           // Lấy message từ API response (hoặc fallback i18n)
-          const successMessage = response?.message || t("toast:register_success");
+          const successMessage =
+            response?.message || t("toast:register_success");
           toast.success(successMessage, { id: toastId });
           closeModal();
         } catch (error) {
           // Lấy message từ API backend
           const errorMessage =
-            error.response?.data?.message || 
-            error.message || 
+            error.response?.data?.message ||
+            error.message ||
             t("toast:register_failed");
           toast.error(errorMessage, { id: toastId });
           console.error("Register error:", error);
@@ -164,29 +167,61 @@ const ModalLogin = ({ mode, onSwitchMode }) => {
 
               <label className="floating-label">
                 <span>{t("login.password")} *</span>
-                <input
-                  type="password"
-                  name="password"
-                  placeholder={t("login.password")}
-                  className="input input-bordered w-full"
-                  value={form.password}
-                  onChange={handleChange}
-                  required
-                />
+
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    placeholder={t("login.password")}
+                    className="input input-bordered w-full pr-12"
+                    value={form.password}
+                    onChange={handleChange}
+                    required
+                  />
+
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <FaEyeSlash size={18} />
+                    ) : (
+                      <FaEye size={18} />
+                    )}
+                  </button>
+                </div>
               </label>
 
               {mode === "signup" && (
                 <label className="floating-label">
                   <span>{t("login.confirm_password")} *</span>
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    placeholder={t("login.confirm_password")}
-                    className="input input-bordered w-full"
-                    value={form.confirmPassword}
-                    onChange={handleChange}
-                    required
-                  />
+
+                  <div className="relative">
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      name="confirmPassword"
+                      placeholder={t("login.confirm_password")}
+                      className="input input-bordered w-full pr-12"
+                      value={form.confirmPassword}
+                      onChange={handleChange}
+                      required
+                    />
+
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
+                    >
+                      {showConfirmPassword ? (
+                        <FaEyeSlash size={18} />
+                      ) : (
+                        <FaEye size={18} />
+                      )}
+                    </button>
+                  </div>
                 </label>
               )}
 

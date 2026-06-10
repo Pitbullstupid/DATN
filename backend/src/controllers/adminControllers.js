@@ -11,7 +11,9 @@ import { releasePayment } from "./paymentControllers.js";
 // ─────────────────────────────────────────────────────────────
 export const isAdmin = (req, res, next) => {
   if (req.user?.role !== "ADMIN") {
-    return res.status(403).json({ status: "error", message: "Không có quyền truy cập" });
+    return res
+      .status(403)
+      .json({ status: "error", message: "Không có quyền truy cập" });
   }
   next();
 };
@@ -29,13 +31,13 @@ const paginate = (page, limit) => ({
 /** Tái sử dụng pattern recalculate rating từ reviewCourse + deleteReview */
 const recalcTutorRating = async (tx, tutorProfileId) => {
   const agg = await tx.review.aggregate({
-    where:  { tutorProfileId },
-    _avg:   { rating: true },
+    where: { tutorProfileId },
+    _avg: { rating: true },
     _count: { id: true },
   });
   await tx.tutorProfile.update({
     where: { id: tutorProfileId },
-    data:  { rating: agg._avg.rating ?? 0, totalReviews: agg._count.id },
+    data: { rating: agg._avg.rating ?? 0, totalReviews: agg._count.id },
   });
 };
 
@@ -59,8 +61,12 @@ export const getStats = async (req, res) => {
       prisma.user.count({ where: { role: "TUTOR" } }),
       prisma.user.count({ where: { role: "STUDENT" } }),
       prisma.courseClass.count(),
-      prisma.courseClass.count({ where: { status: { in: ["UPCOMING", "ONGOING"] } } }),
-      prisma.tutorProfile.count({ where: { status: { in: ["PENDING", "REVIEWING"] } } }),
+      prisma.courseClass.count({
+        where: { status: { in: ["UPCOMING", "ONGOING"] } },
+      }),
+      prisma.tutorProfile.count({
+        where: { status: { in: ["PENDING", "REVIEWING"] } },
+      }),
       prisma.review.aggregate({ _avg: { rating: true }, _count: { id: true } }),
       prisma.payment.aggregate({
         _sum: { amount: true },
@@ -81,9 +87,9 @@ export const getStats = async (req, res) => {
         totalCourses,
         activeCourses,
         pendingApprovals,
-        avgRating:     Number((reviewStats._avg.rating ?? 0).toFixed(1)),
-        totalReviews:  reviewStats._count.id,
-        totalRevenue:  revenueAgg._sum.amount ?? 0,
+        avgRating: Number((reviewStats._avg.rating ?? 0).toFixed(1)),
+        totalReviews: reviewStats._count.id,
+        totalRevenue: revenueAgg._sum.amount ?? 0,
         pendingPayouts: pendingPayoutsAgg._sum.amount ?? 0,
       },
     });
@@ -106,7 +112,7 @@ export const getUsers = async (req, res) => {
     if (role) where.role = role;
     if (search) {
       where.OR = [
-        { name:  { contains: search, mode: "insensitive" } },
+        { name: { contains: search, mode: "insensitive" } },
         { email: { contains: search, mode: "insensitive" } },
       ];
     }
@@ -118,8 +124,13 @@ export const getUsers = async (req, res) => {
         take,
         orderBy: { createdAt: "desc" },
         select: {
-          id: true, name: true, email: true,
-          role: true, gender: true, avatar: true, createdAt: true,
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          gender: true,
+          avatar: true,
+          createdAt: true,
           tutorProfile: { select: { id: true, status: true } },
           _count: { select: { enrolledCourses: true, bookingsSent: true } },
         },
@@ -131,7 +142,12 @@ export const getUsers = async (req, res) => {
       status: "success",
       data: {
         users,
-        pagination: { total, page: parseInt(page), limit: take, totalPages: Math.ceil(total / take) },
+        pagination: {
+          total,
+          page: parseInt(page),
+          limit: take,
+          totalPages: Math.ceil(total / take),
+        },
       },
     });
   } catch (err) {
@@ -147,8 +163,13 @@ export const getUserById = async (req, res) => {
     const user = await prisma.user.findUnique({
       where: { id: req.params.id },
       select: {
-        id: true, name: true, email: true,
-        role: true, gender: true, avatar: true, createdAt: true,
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        gender: true,
+        avatar: true,
+        createdAt: true,
         tutorProfile: {
           include: { educations: true, socialMedia: true, wallet: true },
         },
@@ -156,7 +177,11 @@ export const getUserById = async (req, res) => {
           orderBy: { createdAt: "desc" },
           take: 10,
           select: {
-            id: true, subject: true, status: true, totalPrice: true, startDate: true,
+            id: true,
+            subject: true,
+            status: true,
+            totalPrice: true,
+            startDate: true,
             tutorProfile: { select: { user: { select: { name: true } } } },
           },
         },
@@ -168,7 +193,10 @@ export const getUserById = async (req, res) => {
       },
     });
 
-    if (!user) return res.status(404).json({ status: "error", message: "Không tìm thấy user" });
+    if (!user)
+      return res
+        .status(404)
+        .json({ status: "error", message: "Không tìm thấy user" });
 
     res.status(200).json({ status: "success", data: { user } });
   } catch (err) {
@@ -186,30 +214,37 @@ export const toggleSuspendUser = async (req, res) => {
     const { id } = req.params;
 
     if (id === req.user.id) {
-      return res.status(400).json({ status: "error", message: "Không thể tự khoá chính mình" });
+      return res
+        .status(400)
+        .json({ status: "error", message: "Không thể tự khoá chính mình" });
     }
 
     const user = await prisma.user.findUnique({
       where: { id },
       include: { tutorProfile: { select: { id: true, status: true } } },
     });
-    if (!user) return res.status(404).json({ status: "error", message: "Không tìm thấy user" });
+    if (!user)
+      return res
+        .status(404)
+        .json({ status: "error", message: "Không tìm thấy user" });
 
     if (user.role === "TUTOR" && user.tutorProfile) {
       const isSuspended = user.tutorProfile.status === "SUSPENDED";
-      const newStatus   = isSuspended ? "APPROVED" : "SUSPENDED";
+      const newStatus = isSuspended ? "APPROVED" : "SUSPENDED";
 
       await prisma.tutorProfile.update({
         where: { id: user.tutorProfile.id },
-        data:  { status: newStatus },
+        data: { status: newStatus },
       });
 
       // Notify gia sư
       await notify({
         userId: id,
-        type:   isSuspended ? "BOOKING_RECEIVED" : "BOOKING_REJECTED",
-        title:  isSuspended ? "Tài khoản đã được mở khoá" : "Tài khoản bị tạm khoá",
-        body:   isSuspended
+        type: isSuspended ? "BOOKING_RECEIVED" : "BOOKING_REJECTED",
+        title: isSuspended
+          ? "Tài khoản đã được mở khoá"
+          : "Tài khoản bị tạm khoá",
+        body: isSuspended
           ? "Tài khoản gia sư của bạn đã được khôi phục."
           : "Tài khoản của bạn đã bị tạm khoá. Vui lòng liên hệ admin.",
       });
@@ -222,7 +257,8 @@ export const toggleSuspendUser = async (req, res) => {
 
     return res.status(400).json({
       status: "error",
-      message: "Student chưa hỗ trợ khoá tài khoản. Thêm field isActive Boolean vào model User trong schema.",
+      message:
+        "Student chưa hỗ trợ khoá tài khoản. Thêm field isActive Boolean vào model User trong schema.",
     });
   } catch (err) {
     res.status(500).json({ status: "error", message: err.message });
@@ -249,7 +285,7 @@ export const getTutorApprovals = async (req, res) => {
         take,
         orderBy: { createdAt: "asc" }, // cũ nhất lên trước
         include: {
-          user:       { select: { id: true, name: true, email: true, avatar: true } },
+          user: { select: { id: true, name: true, email: true, avatar: true } },
           educations: true,
           socialMedia: true,
         },
@@ -261,7 +297,12 @@ export const getTutorApprovals = async (req, res) => {
       status: "success",
       data: {
         profiles,
-        pagination: { total, page: parseInt(page), limit: take, totalPages: Math.ceil(total / take) },
+        pagination: {
+          total,
+          page: parseInt(page),
+          limit: take,
+          totalPages: Math.ceil(total / take),
+        },
       },
     });
   } catch (err) {
@@ -279,10 +320,19 @@ export const getTutorDetail = async (req, res) => {
     const profile = await prisma.tutorProfile.findUnique({
       where: { id: req.params.id },
       include: {
-        user:       { select: { id: true, name: true, email: true, avatar: true, gender: true, createdAt: true } },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+            gender: true,
+            createdAt: true,
+          },
+        },
         educations: true,
         socialMedia: true,
-        schedules:  true,
+        schedules: true,
         reviews: {
           orderBy: { createdAt: "desc" },
           take: 5,
@@ -295,7 +345,10 @@ export const getTutorDetail = async (req, res) => {
       },
     });
 
-    if (!profile) return res.status(404).json({ status: "error", message: "Không tìm thấy hồ sơ gia sư" });
+    if (!profile)
+      return res
+        .status(404)
+        .json({ status: "error", message: "Không tìm thấy hồ sơ gia sư" });
 
     res.status(200).json({ status: "success", data: { profile } });
   } catch (err) {
@@ -313,15 +366,20 @@ export const approveTutor = async (req, res) => {
       where: { id: req.params.id },
       select: { userId: true, status: true },
     });
-    if (!profile) return res.status(404).json({ status: "error", message: "Không tìm thấy hồ sơ" });
+    if (!profile)
+      return res
+        .status(404)
+        .json({ status: "error", message: "Không tìm thấy hồ sơ" });
     if (profile.status === "APPROVED") {
-      return res.status(400).json({ status: "error", message: "Hồ sơ đã được duyệt trước đó" });
+      return res
+        .status(400)
+        .json({ status: "error", message: "Hồ sơ đã được duyệt trước đó" });
     }
 
     // FIX: submitProfile trong tutorControllers cũng reset adminNote → null, giữ nhất quán
     const updated = await prisma.tutorProfile.update({
       where: { id: req.params.id },
-      data:  { status: "APPROVED", adminNote: null },
+      data: { status: "APPROVED", adminNote: null },
     });
 
     // Dùng notify() từ notificationService (tái sử dụng, không gọi prisma.notification.create trực tiếp)
@@ -329,9 +387,9 @@ export const approveTutor = async (req, res) => {
     // → Khuyên thêm enum PROFILE_APPROVED vào schema sau, tạm dùng PAYMENT_RECEIVED
     await notify({
       userId: profile.userId,
-      type:   "PAYMENT_RECEIVED", // TODO: thêm PROFILE_APPROVED vào NotificationType enum
-      title:  "Hồ sơ đã được duyệt!",
-      body:   "Chúc mừng! Hồ sơ gia sư của bạn đã được phê duyệt. Bạn có thể bắt đầu nhận học viên.",
+      type: "PAYMENT_RECEIVED", // TODO: thêm PROFILE_APPROVED vào NotificationType enum
+      title: "Hồ sơ đã được duyệt!",
+      body: "Chúc mừng! Hồ sơ gia sư của bạn đã được phê duyệt. Bạn có thể bắt đầu nhận học viên.",
     });
 
     res.status(200).json({
@@ -356,22 +414,27 @@ export const rejectTutor = async (req, res) => {
       where: { id: req.params.id },
       select: { userId: true, status: true },
     });
-    if (!profile) return res.status(404).json({ status: "error", message: "Không tìm thấy hồ sơ" });
+    if (!profile)
+      return res
+        .status(404)
+        .json({ status: "error", message: "Không tìm thấy hồ sơ" });
     if (profile.status === "REJECTED") {
-      return res.status(400).json({ status: "error", message: "Hồ sơ đã bị từ chối trước đó" });
+      return res
+        .status(400)
+        .json({ status: "error", message: "Hồ sơ đã bị từ chối trước đó" });
     }
 
     // FIX: submitProfile reset adminNote → null, reject ghi lý do → nhất quán
     const updated = await prisma.tutorProfile.update({
       where: { id: req.params.id },
-      data:  { status: "REJECTED", adminNote: adminNote || null },
+      data: { status: "REJECTED", adminNote: adminNote || null },
     });
 
     await notify({
       userId: profile.userId,
-      type:   "BOOKING_REJECTED", // gần nhất về ngữ nghĩa "bị từ chối"
-      title:  "Hồ sơ chưa được duyệt",
-      body:   adminNote
+      type: "BOOKING_REJECTED", // gần nhất về ngữ nghĩa "bị từ chối"
+      title: "Hồ sơ chưa được duyệt",
+      body: adminNote
         ? `Lý do: ${adminNote}`
         : "Hồ sơ của bạn chưa đáp ứng yêu cầu. Vui lòng cập nhật và nộp lại.",
     });
@@ -397,7 +460,7 @@ export const getCourses = async (req, res) => {
 
     const where = {};
     if (status) where.status = status;
-    if (search)  where.subject = { contains: search, mode: "insensitive" };
+    if (search) where.subject = { contains: search, mode: "insensitive" };
 
     const [courses, total] = await prisma.$transaction([
       prisma.courseClass.findMany({
@@ -406,10 +469,15 @@ export const getCourses = async (req, res) => {
         take,
         orderBy: { createdAt: "desc" },
         include: {
-          student:      { select: { id: true, name: true, avatar: true } },
-          tutorProfile: { select: { id: true, user: { select: { name: true, avatar: true } } } },
-          payment:      { select: { status: true, amount: true } },
-          _count:       { select: { sessions: true } },
+          student: { select: { id: true, name: true, avatar: true } },
+          tutorProfile: {
+            select: {
+              id: true,
+              user: { select: { name: true, avatar: true } },
+            },
+          },
+          payment: { select: { status: true, amount: true } },
+          _count: { select: { sessions: true } },
         },
       }),
       prisma.courseClass.count({ where }),
@@ -419,7 +487,12 @@ export const getCourses = async (req, res) => {
       status: "success",
       data: {
         courses,
-        pagination: { total, page: parseInt(page), limit: take, totalPages: Math.ceil(total / take) },
+        pagination: {
+          total,
+          page: parseInt(page),
+          limit: take,
+          totalPages: Math.ceil(total / take),
+        },
       },
     });
   } catch (err) {
@@ -437,21 +510,28 @@ export const getCourseById = async (req, res) => {
     const course = await prisma.courseClass.findUnique({
       where: { id: req.params.id },
       include: {
-        student:      { select: { id: true, name: true, email: true, avatar: true } },
+        student: {
+          select: { id: true, name: true, email: true, avatar: true },
+        },
         tutorProfile: {
           select: {
-            id: true, subjects: true, pricePerHour: true,
+            id: true,
+            subjects: true,
+            pricePerHour: true,
             user: { select: { name: true, email: true, avatar: true } },
           },
         },
         schedules: { orderBy: { dayOfWeek: "asc" } },
-        sessions:  { orderBy: { sessionNumber: "asc" } },
-        review:    true,
-        payment:   true,
+        sessions: { orderBy: { sessionNumber: "asc" } },
+        review: true,
+        payment: true,
       },
     });
 
-    if (!course) return res.status(404).json({ status: "error", message: "Không tìm thấy khoá học" });
+    if (!course)
+      return res
+        .status(404)
+        .json({ status: "error", message: "Không tìm thấy khoá học" });
 
     res.status(200).json({ status: "success", data: { course } });
   } catch (err) {
@@ -477,9 +557,11 @@ export const getPayments = async (req, res) => {
         take,
         orderBy: { createdAt: "desc" },
         include: {
-          student:      { select: { id: true, name: true, email: true } },
-          tutorProfile: { select: { id: true, user: { select: { name: true } } } },
-          courseClass:  { select: { id: true, subject: true } },
+          student: { select: { id: true, name: true, email: true } },
+          tutorProfile: {
+            select: { id: true, user: { select: { name: true } } },
+          },
+          courseClass: { select: { id: true, subject: true } },
         },
       }),
       prisma.payment.count({ where }),
@@ -489,7 +571,12 @@ export const getPayments = async (req, res) => {
       status: "success",
       data: {
         payments,
-        pagination: { total, page: parseInt(page), limit: take, totalPages: Math.ceil(total / take) },
+        pagination: {
+          total,
+          page: parseInt(page),
+          limit: take,
+          totalPages: Math.ceil(total / take),
+        },
       },
     });
   } catch (err) {
@@ -517,7 +604,19 @@ export const getWithdrawals = async (req, res) => {
         include: {
           wallet: {
             include: {
-              tutorProfile: { select: { user: { select: { id: true, name: true, email: true } } } },
+              tutorProfile: {
+                select: {
+                  user: { select: { id: true, name: true, email: true } },
+                },
+              },
+            },
+          },
+          bankAccount: {
+            select: {
+              bankName: true,
+              accountNumber: true,
+              accountHolder: true,
+              branch: true,
             },
           },
         },
@@ -529,7 +628,12 @@ export const getWithdrawals = async (req, res) => {
       status: "success",
       data: {
         withdrawals,
-        pagination: { total, page: parseInt(page), limit: take, totalPages: Math.ceil(total / take) },
+        pagination: {
+          total,
+          page: parseInt(page),
+          limit: take,
+          totalPages: Math.ceil(total / take),
+        },
       },
     });
   } catch (err) {
@@ -547,7 +651,12 @@ export const processWithdrawal = async (req, res) => {
     const { status } = req.body;
     const allowed = ["PROCESSING", "COMPLETED", "FAILED"];
     if (!allowed.includes(status)) {
-      return res.status(400).json({ status: "error", message: `status phải là: ${allowed.join(", ")}` });
+      return res
+        .status(400)
+        .json({
+          status: "error",
+          message: `status phải là: ${allowed.join(", ")}`,
+        });
     }
 
     const withdrawal = await prisma.withdrawal.findUnique({
@@ -557,6 +666,15 @@ export const processWithdrawal = async (req, res) => {
         status: true,
         amount: true,
         walletId: true,
+        bankSnapshot: true,
+        bankAccount: {
+          select: {
+            bankName: true,
+            accountNumber: true,
+            accountHolder: true,
+            branch: true,
+          },
+        },
         wallet: {
           select: {
             tutorProfile: {
@@ -570,10 +688,14 @@ export const processWithdrawal = async (req, res) => {
       },
     });
     if (!withdrawal) {
-      return res.status(404).json({ status: "error", message: "Không tìm thấy yêu cầu rút tiền" });
+      return res
+        .status(404)
+        .json({ status: "error", message: "Không tìm thấy yêu cầu rút tiền" });
     }
     if (withdrawal.status === "COMPLETED") {
-      return res.status(400).json({ status: "error", message: "Yêu cầu này đã hoàn tất" });
+      return res
+        .status(400)
+        .json({ status: "error", message: "Yêu cầu này đã hoàn tất" });
     }
 
     const data = { status };
@@ -585,7 +707,7 @@ export const processWithdrawal = async (req, res) => {
         prisma.withdrawal.update({ where: { id: req.params.id }, data }),
         prisma.tutorWallet.update({
           where: { id: withdrawal.walletId },
-          data:  { balance: { increment: withdrawal.amount } },
+          data: { balance: { increment: withdrawal.amount } },
         }),
       ]);
     } else {
@@ -600,7 +722,12 @@ export const processWithdrawal = async (req, res) => {
       );
     }
 
-    res.status(200).json({ status: "success", message: `Đã cập nhật trạng thái: ${status}` });
+    res
+      .status(200)
+      .json({
+        status: "success",
+        message: `Đã cập nhật trạng thái: ${status}`,
+      });
   } catch (err) {
     res.status(500).json({ status: "error", message: err.message });
   }
@@ -625,9 +752,11 @@ export const getReviews = async (req, res) => {
         take,
         orderBy: { createdAt: "desc" },
         include: {
-          student:      { select: { id: true, name: true, avatar: true } },
-          tutorProfile: { select: { id: true, user: { select: { name: true } } } },
-          courseClass:  { select: { subject: true } },
+          student: { select: { id: true, name: true, avatar: true } },
+          tutorProfile: {
+            select: { id: true, user: { select: { name: true } } },
+          },
+          courseClass: { select: { subject: true } },
         },
       }),
       prisma.review.count({ where }),
@@ -637,7 +766,12 @@ export const getReviews = async (req, res) => {
       status: "success",
       data: {
         reviews,
-        pagination: { total, page: parseInt(page), limit: take, totalPages: Math.ceil(total / take) },
+        pagination: {
+          total,
+          page: parseInt(page),
+          limit: take,
+          totalPages: Math.ceil(total / take),
+        },
       },
     });
   } catch (err) {
@@ -653,10 +787,13 @@ export const getReviews = async (req, res) => {
 export const deleteReview = async (req, res) => {
   try {
     const review = await prisma.review.findUnique({
-      where:  { id: req.params.id },
+      where: { id: req.params.id },
       select: { id: true, tutorProfileId: true },
     });
-    if (!review) return res.status(404).json({ status: "error", message: "Không tìm thấy đánh giá" });
+    if (!review)
+      return res
+        .status(404)
+        .json({ status: "error", message: "Không tìm thấy đánh giá" });
 
     await prisma.$transaction(async (tx) => {
       await tx.review.delete({ where: { id: req.params.id } });
@@ -703,7 +840,9 @@ export const createSubject = async (req, res) => {
   try {
     const { name } = req.body;
     if (!name?.trim()) {
-      return res.status(400).json({ status: "error", message: "Tên môn học không được để trống" });
+      return res
+        .status(400)
+        .json({ status: "error", message: "Tên môn học không được để trống" });
     }
 
     const subject = await prisma.subject.create({
@@ -714,7 +853,9 @@ export const createSubject = async (req, res) => {
   } catch (err) {
     // Prisma unique constraint violation
     if (err.code === "P2002") {
-      return res.status(409).json({ status: "error", message: "Môn học này đã tồn tại" });
+      return res
+        .status(409)
+        .json({ status: "error", message: "Môn học này đã tồn tại" });
     }
     res.status(500).json({ status: "error", message: err.message });
   }
@@ -731,7 +872,9 @@ export const updateSubject = async (req, res) => {
 
     const exists = await prisma.subject.findUnique({ where: { id } });
     if (!exists) {
-      return res.status(404).json({ status: "error", message: "Không tìm thấy môn học" });
+      return res
+        .status(404)
+        .json({ status: "error", message: "Không tìm thấy môn học" });
     }
 
     const data = {};
@@ -743,7 +886,9 @@ export const updateSubject = async (req, res) => {
     res.status(200).json({ status: "success", data: { subject } });
   } catch (err) {
     if (err.code === "P2002") {
-      return res.status(409).json({ status: "error", message: "Tên môn học đã được dùng" });
+      return res
+        .status(409)
+        .json({ status: "error", message: "Tên môn học đã được dùng" });
     }
     res.status(500).json({ status: "error", message: err.message });
   }
@@ -758,7 +903,9 @@ export const deleteSubject = async (req, res) => {
 
     const exists = await prisma.subject.findUnique({ where: { id } });
     if (!exists) {
-      return res.status(404).json({ status: "error", message: "Không tìm thấy môn học" });
+      return res
+        .status(404)
+        .json({ status: "error", message: "Không tìm thấy môn học" });
     }
 
     await prisma.subject.delete({ where: { id } });

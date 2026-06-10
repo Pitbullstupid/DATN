@@ -14,6 +14,7 @@ import {
   FiCalendar,
   FiEdit2,
   FiAlertCircle,
+  FiZap,
 } from "react-icons/fi";
 import { FaCheckCircle, FaTimes } from "react-icons/fa";
 import { FaXmark } from "react-icons/fa6";
@@ -206,7 +207,6 @@ const TutorDashboard = () => {
   const fetchBookings = async () => {
     setLoadingBookings(true);
     try {
-      // Lấy tất cả để tính stats + hiển thị PENDING trước
       const [allRes, pendingRes] = await Promise.all([
         getMyBookingsAsTutor({ limit: 100 }),
         getMyBookingsAsTutor({ status: "PENDING", limit: 5 }),
@@ -221,28 +221,26 @@ const TutorDashboard = () => {
         total: all.length,
       });
     } catch {
-      // silent — không block dashboard
+      // silent
     } finally {
       setLoadingBookings(false);
     }
   };
 
-  // Thêm vào trong TutorDashboard component
   useEffect(() => {
     const handler = () => {
       fetchBookings();
       fetchDashboardStats();
       fetchProfile();
     };
-
     window.addEventListener("new-notification", handler);
     return () => window.removeEventListener("new-notification", handler);
   }, []);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchBookings();
     }, 0);
-
     return () => clearTimeout(timer);
   }, []);
 
@@ -253,10 +251,8 @@ const TutorDashboard = () => {
         getMyCoursesAsTutor({ limit: 200 }),
         paymentApi.getMyWallet(),
       ]);
-
       const courses = coursesRes.data?.data?.courses || [];
       const wallet = walletRes.data?.data?.wallet || {};
-
       setCourseStats({
         total: courses.length,
         upcoming: courses.filter((c) => c.status === "UPCOMING").length,
@@ -269,7 +265,7 @@ const TutorDashboard = () => {
         balance: wallet.balance ?? 0,
       });
     } catch {
-      // Stats are supplemental; keep the dashboard usable if one endpoint fails.
+      // Stats are supplemental
     } finally {
       setLoadingStats(false);
     }
@@ -279,7 +275,6 @@ const TutorDashboard = () => {
     const timer = setTimeout(() => {
       fetchDashboardStats();
     }, 0);
-
     return () => clearTimeout(timer);
   }, []);
 
@@ -300,6 +295,13 @@ const TutorDashboard = () => {
       })
     : "—";
 
+  // Coi là "chưa setup" khi chưa có bio, phone, subjects
+  const isProfileEmpty =
+    !loadingProfile &&
+    !profile?.bio &&
+    !profile?.phone &&
+    (!profile?.subjects || profile.subjects.length === 0);
+
   const statusCls = PROFILE_STATUS_CLS[status] ?? PROFILE_STATUS_CLS.PENDING;
   const statusLabel = t(`dashboard:profile_status.${status}`, {
     defaultValue: t("dashboard:profile_status.PENDING"),
@@ -307,7 +309,6 @@ const TutorDashboard = () => {
   const infoValues = { joinDate, email, phone, address };
   const formatUsd = (value) => `$${Number(value || 0).toFixed(2)}`;
 
-  // ── Stat cards (dynamic) ───────────────────────────────────
   const statCards = [
     {
       label: t("dashboard:stats.hiring_request"),
@@ -373,7 +374,6 @@ const TutorDashboard = () => {
 
   return (
     <div className="min-h-screen bg-base-200">
-      {/* Accept / Reject modals */}
       {acceptTarget && (
         <AcceptBookingModal
           booking={acceptTarget}
@@ -407,7 +407,6 @@ const TutorDashboard = () => {
         </div>
       </div>
 
-      {/* ── Main content ─────────────────────────────────────── */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 pb-16">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* ── LEFT — Profile card ──────────────────────────── */}
@@ -494,37 +493,103 @@ const TutorDashboard = () => {
               </div>
 
               <div className="p-4">
-                <button
-                  onClick={() => navigate("/tutor/profile/edit")}
-                  className="btn btn-primary btn-sm w-full gap-2"
-                >
-                  <FiEdit2 size={14} /> {t("dashboard:profile.edit")}
-                </button>
+                {status == "APPROVED" && (
+                  <button
+                    onClick={() => navigate("/tutor/profile/edit")}
+                    className="btn btn-primary btn-sm w-full gap-2"
+                  >
+                    <FiEdit2 size={14} /> {t("dashboard:profile.edit")}
+                  </button>
+                )}
               </div>
             </div>
 
-            {!loadingProfile && status !== "APPROVED" && (
-              <div className="bg-warning/10 border border-warning/30 rounded-2xl p-4 flex gap-3 text-sm">
-                <FiAlertCircle
-                  className="text-warning shrink-0 mt-0.5"
-                  size={16}
-                />
-                <div>
-                  <p className="font-semibold text-base-content">
-                    {t("dashboard:profile.incomplete_title")}
-                  </p>
-                  <p className="text-base-content/60 text-xs mt-0.5">
-                    {t("dashboard:profile.incomplete_desc")}
-                  </p>
-                  <button
-                    onClick={() => navigate("/tutor/profile/edit")}
-                    className="btn btn-warning btn-xs mt-2"
-                  >
-                    {t("dashboard:profile.complete_now")}
-                  </button>
+            {/* ── Banner setup hồ sơ ── */}
+            {!loadingProfile &&
+              status !== "APPROVED" &&
+              (isProfileEmpty ? (
+                /* Chưa setup lần nào — hiện 2 lựa chọn */
+                <div className="bg-base-100 border border-primary/20 rounded-2xl p-5 shadow-sm">
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                      <FiUser size={16} className="text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-base-content text-sm">
+                        Bắt đầu hồ sơ gia sư
+                      </p>
+                      <p className="text-base-content/50 text-xs mt-0.5">
+                        Chọn cách bạn muốn thiết lập hồ sơ
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {/* Nút setup thường */}
+                    <button
+                      onClick={() => navigate("/tutor/profile/edit")}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl border border-base-300 hover:border-primary hover:bg-primary/5 transition-all text-left group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-base-200 group-hover:bg-primary/10 flex items-center justify-center shrink-0 transition-colors">
+                        <FiEdit2
+                          size={14}
+                          className="text-base-content/50 group-hover:text-primary"
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-base-content">
+                          Tự điền thủ công
+                        </p>
+                        <p className="text-xs text-base-content/40">
+                          Điền từng bước theo form
+                        </p>
+                      </div>
+                    </button>
+
+                    {/* Nút setup với AI */}
+                    <button
+                      onClick={() =>
+                        navigate("/tutor/profile/edit?openCV=true")
+                      }
+                      className="w-full flex items-center gap-3 p-3 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-all text-left group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center shrink-0 transition-colors">
+                        <FiZap size={14} className="text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-primary">
+                          Điền nhanh bằng AI
+                        </p>
+                        <p className="text-xs text-primary/60">
+                          Upload CV — AI tự trích xuất thông tin
+                        </p>
+                      </div>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              ) : (
+                /* Đã có hồ sơ nhưng chưa APPROVED — warning như cũ */
+                <div className="bg-warning/10 border border-warning/30 rounded-2xl p-4 flex gap-3 text-sm">
+                  <FiAlertCircle
+                    className="text-warning shrink-0 mt-0.5"
+                    size={16}
+                  />
+                  <div>
+                    <p className="font-semibold text-base-content">
+                      {t("dashboard:profile.incomplete_title")}
+                    </p>
+                    <p className="text-base-content/60 text-xs mt-0.5">
+                      {t("dashboard:profile.incomplete_desc")}
+                    </p>
+                    <button
+                      onClick={() => navigate("/tutor/profile/edit")}
+                      className="btn btn-warning btn-xs mt-2"
+                    >
+                      {t("dashboard:profile.complete_now")}
+                    </button>
+                  </div>
+                </div>
+              ))}
           </aside>
 
           {/* ── RIGHT — Stats + Table ────────────────────────── */}
@@ -535,7 +600,6 @@ const TutorDashboard = () => {
               </div>
             )}
 
-            {/* Stat cards */}
             <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
               {statCards.map((card) => {
                 const Icon = card.icon;
@@ -647,7 +711,6 @@ const TutorDashboard = () => {
                             key={b.id}
                             className="hover:bg-base-200/40 transition-colors"
                           >
-                            {/* Student */}
                             <td className="px-5 py-3 whitespace-nowrap">
                               <div className="flex items-center gap-2">
                                 <img
@@ -668,29 +731,21 @@ const TutorDashboard = () => {
                                 </div>
                               </div>
                             </td>
-
-                            {/* Subject */}
                             <td className="px-5 py-3 whitespace-nowrap">
                               <span className="text-base-content font-medium text-xs">
                                 {b.subject}
                               </span>
                             </td>
-
-                            {/* Message */}
                             <td className="px-5 py-3 max-w-45">
                               <p className="text-base-content/60 text-xs line-clamp-2">
                                 {b.message}
                               </p>
                             </td>
-
-                            {/* Status */}
                             <td className="px-5 py-3 whitespace-nowrap">
                               <span className={`badge ${badge} badge-sm`}>
                                 {bookingStatusLabel}
                               </span>
                             </td>
-
-                            {/* Action */}
                             <td className="px-5 py-3 whitespace-nowrap">
                               {b.status === "PENDING" ? (
                                 <div className="flex gap-1.5">
@@ -723,7 +778,6 @@ const TutorDashboard = () => {
                 )}
               </div>
 
-              {/* Footer link */}
               {bookings.length > 0 && (
                 <div className="px-6 py-3 border-t border-base-200 text-center">
                   <button

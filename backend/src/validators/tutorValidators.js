@@ -6,6 +6,7 @@ export const step1Schema = z.object({
   phone:   z.string().regex(/^\d{9,11}$/, "Số điện thoại không hợp lệ").optional(),
   address: z.string().min(3, "Địa chỉ quá ngắn").optional(),
   country: z.string().min(2, "Quốc gia không hợp lệ").optional(),
+  gender:  z.enum(["MALE", "FEMALE", "OTHER"]).optional(),
 });
 
 // ── Bước 2: Thông tin dạy học ─────────────────────────────────
