@@ -32,7 +32,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-base-200 flex">
+    <div className="h-screen bg-base-200 flex overflow-hidden">
       <AdminSidebar
         collapsed={collapsed}
         setCollapsed={setCollapsed}
@@ -41,7 +41,7 @@ export default function AdminDashboard() {
         pendingCount={pendingCount}
       />
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <AdminHeader activeNav={activeNav} />
 
         <main className="flex-1 overflow-y-auto p-6">

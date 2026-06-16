@@ -5,7 +5,7 @@ import { one, two, three, four, five, six } from '../assets/school/slideSchool.j
 
 const SlidingSchools = () => {
   return (
-    <section className="bg-base-200  py-10 flex flex-col gap-16 text-center">
+    <section className="bg-base/50  py-10 flex flex-col gap-16 text-center">
       {/* <h2 className="text-base-content tracking-[5px] text-sm font-semibold uppercase">
         SomeThings
       </h2> */}

@@ -8,7 +8,7 @@ import avatar from "../assets/DefaultAvatar.jpg";
 import { CgProfile } from "react-icons/cg";
 import { LuLogOut } from "react-icons/lu";
 import { useTranslation } from "react-i18next";
-import { MdLanguage } from "react-icons/md";
+import { MdAdminPanelSettings, MdLanguage } from "react-icons/md";
 import NotificationBell from "./NotificationBell.jsx";
 
 const Navbar = () => {
@@ -30,6 +30,7 @@ const Navbar = () => {
     i18n.changeLanguage(lng);
   };
 
+  console.log("Navbar render, user:", user);
   return (
     <div className="navbar bg-base-100 shadow-sm sticky top-0 z-50">
       <div className="navbar-start">
@@ -113,7 +114,9 @@ const Navbar = () => {
           </li>
           <li>
             <a onClick={() => navigate("/schedule")}>
-              {user?.role === "STUDENT" ? t("common:nav.schedule") : t("common:nav.schedule1")}
+              {user?.role === "STUDENT"
+                ? t("common:nav.schedule")
+                : t("common:nav.schedule1")}
             </a>
           </li>
         </ul>
@@ -178,9 +181,19 @@ const Navbar = () => {
                   </span>
                 </li>
                 <li>
-                  <button onClick={handleClickProfile}>
-                    <CgProfile /> {t("login.btn_profile")}
-                  </button>
+                  {user?.role === "ADMIN" ? (
+                    <button
+                      onClick={() => {
+                        navigate("/admin");
+                      }}
+                    >
+                      <MdAdminPanelSettings /> Admin
+                    </button>
+                  ) : (
+                    <button onClick={handleClickProfile}>
+                      <CgProfile /> {t("login.btn_profile")}
+                    </button>
+                  )}
                 </li>
                 <li>
                   <button

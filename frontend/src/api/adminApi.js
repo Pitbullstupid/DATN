@@ -162,6 +162,14 @@ const updateSubject = (id, body) => API.patch(`/admin/subjects/${id}`, body);
  */
 const deleteSubject = (id) => API.delete(`/admin/subjects/${id}`);
 
+// ─── Charts ───────────────────────────────────────────────────────────────────
+
+/**
+ * Dữ liệu biểu đồ cho Dashboard
+ * @returns {{ revenue, newUsers, courseStatus, starDist }}
+ */
+const getChartData = () => API.get("/admin/charts");
+
 // ─── Export ───────────────────────────────────────────────────────────────────
 export const adminApi = {
   // Stats
@@ -196,4 +204,7 @@ export const adminApi = {
   createSubject,
   updateSubject,
   deleteSubject,
+
+  // Charts
+  getChartData,
 };

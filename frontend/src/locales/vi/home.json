@@ -4,11 +4,12 @@
     "title": "Tiếp cận nền giáo dục chất lượng tốt nhất ngay bây giờ",
     "highlight_title": "Dễ dàng hơn",
     "description": "Mở khóa tiềm năng thực sự của các nhà cung cấp giáo dục thông qua công nghệ tiên tiến!",
-    "get_started": "Bắt đầu ngay"
+    "get_started": "Bắt đầu ngay",
+    "joined_count": "12,000+ học sinh đã tham gia"
   },
-  "stats_bar":{
-    "title":"Về chúng tôi",
-    "sub_title":"Luôn đồng hành cùng học viên trên con đường học tập",
+  "stats_bar": {
+    "title": "Về chúng tôi",
+    "sub_title": "Luôn đồng hành cùng học viên trên con đường học tập",
     "user": "Người dùng",
     "tutor": "Gia sư",
     "total": "Tổng giao dịch",
@@ -17,7 +18,7 @@
   "gallery": {
     "title": "Nổi bật"
   },
-  "categories":{
+  "categories": {
     "title": "Khám phá các khóa học",
     "description": "Tìm kiếm những khóa học phù hợp với yêu cầu của bạn",
     "Mathematics": "Toán học",
@@ -31,26 +32,55 @@
     "Commerce": "Thương mại",
     "Medical": "Y học"
   },
-  "login":{
-    "title_login":"Đăng nhập",
-    "title_register":"Đăng ký",
-    "email":"Email",
-    "password":"Mật khẩu",
-    "confirm_password":"Xác nhận mật khẩu",
-    "name":"Họ và tên",
-    "btn_remember":"Ghi nhớ đăng nhập",
-    "btn_forgot_password":"Quên mật khẩu?",
-    "btn_login":"Đăng nhập",
-    "btn_register":"Đăng ký",
-    "btn_login_with_google":"Đăng nhập với Google",
-    "btn_profile":"Hồ sơ",
-    "btn_logout":"Đăng xuất",
-    "role_tutor":"Gia sư",
-    "role_student":"Học viên",
-    "btn_register1":"Bạn chưa có tài khoản? Đăng ký",
-    "btn_login1":"Bạn đã có tài khoản? Đăng nhập",
-    "dashboard":"Trang chủ",
-    "dashboard_tutor":"Gia sư",
-    "dashboard_booking":"Đặt lịch"
+  "login": {
+    "title_login": "Đăng nhập",
+    "title_register": "Đăng ký",
+    "email": "Email",
+    "password": "Mật khẩu",
+    "confirm_password": "Xác nhận mật khẩu",
+    "name": "Họ và tên",
+    "btn_remember": "Ghi nhớ đăng nhập",
+    "btn_forgot_password": "Quên mật khẩu?",
+    "btn_login": "Đăng nhập",
+    "btn_register": "Đăng ký",
+    "btn_login_with_google": "Đăng nhập với Google",
+    "btn_profile": "Hồ sơ",
+    "btn_logout": "Đăng xuất",
+    "role_tutor": "Gia sư",
+    "role_student": "Học viên",
+    "btn_register1": "Bạn chưa có tài khoản? Đăng ký",
+    "btn_login1": "Bạn đã có tài khoản? Đăng nhập",
+    "dashboard": "Trang chủ",
+    "dashboard_tutor": "Gia sư",
+    "dashboard_booking": "Đặt lịch"
+  },
+  "featured": {
+    "title": "Có thể bạn sẽ thích",
+    "description": "Đề xuất cá nhân hóa dựa trên sở thích học tập của bạn.",
+    "per_hour_unit": "giờ"
+  },
+  "footer": {
+    "description": "Nền tảng giáo dục trực tuyến kết nối học viên và gia sư hàng đầu, mang lại trải nghiệm học tập cá nhân hóa và hiệu quả cao nhất.",
+    "explore": {
+      "title": "Khám phá",
+      "find_tutor": "Tìm kiếm gia sư",
+      "new_courses": "Các khóa học mới",
+      "home_tutoring": "Dịch vụ gia sư tại nhà",
+      "group_learning": "Học nhóm trực tuyến"
+    },
+    "support": {
+      "title": "Hỗ trợ",
+      "help_center": "Trung tâm trợ giúp",
+      "terms": "Quy định sử dụng",
+      "privacy": "Chính sách bảo mật",
+      "contact": "Liên hệ với chúng tôi"
+    },
+    "newsletter": {
+      "title": "Nhận thông tin mới",
+      "description": "Đăng ký để nhận thông báo về các ưu đãi học phí và gia sư mới nhất.",
+      "placeholder": "Email của bạn",
+      "submit": "Gửi"
+    },
+    "copyright": "© {{year}} TutorConnect. All rights reserved."
   }
 }

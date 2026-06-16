@@ -20,6 +20,7 @@ import TutorWalletPage from "./components/TutorWalletPage.jsx";
 import NotificationsPage from "./pages/NotificationsPage.jsx";
 import AdminDashboard from "./admin/AdminDashboard.jsx";
 import Scheduled from "./pages/Scheduled.jsx";
+import ScrollToTop from "./components/ScrollToTop";
 function App() {
   const { user } = useAuth();
   return (
@@ -31,7 +32,7 @@ function App() {
           toastOptions={{ style: { fontSize: "13px" } }}
           z-index={9999}
         />
-
+        <ScrollToTop />
         <Routes>
           <Route path="/" element={<Homepage />} />
           <Route path="/tutor/dashboard" element={<TutorDashboard />} />

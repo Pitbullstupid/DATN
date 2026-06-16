@@ -407,7 +407,13 @@ const TutorProfileEdit = () => {
     }
   };
 
-  const handleCVApply = ({ step1, step2, step3, educations, missing }) => {
+  const handleCVApply = async ({
+    step1,
+    step2,
+    step3,
+    educations: cvEducations,
+    missing,
+  }) => {
     // Merge step1 — chỉ ghi đè trường còn trống
     setStep1((prev) => ({
       bio: step1?.bio || prev.bio,
@@ -437,17 +443,45 @@ const TutorProfileEdit = () => {
       certificate: step3?.certificate ?? prev.certificate,
     }));
 
-    // Thêm education nếu có (không ghi đè list hiện tại, chỉ seed khi trống)
-    if (educations?.length > 0 && educations.length === 0) {
-      // Note: educations được lưu qua API riêng (addEducation).
-      // Ở đây chỉ pre-fill newEdu với mục đầu tiên để user confirm rồi bấm thêm.
-      const first = educations[0];
-      setNewEdu({
-        universityName: first.universityName ?? "",
-        fieldOfStudy: first.fieldOfStudy ?? "",
-        passingYear: String(first.passingYear ?? ""),
-        result: first.result ?? "",
-      });
+    // Tự động thêm các mục học vấn từ CV — chỉ khi danh sách hiện tại đang trống,
+    // để không ghi đè / trùng dữ liệu user đã có sẵn.
+    // - Mục đủ 4 trường bắt buộc -> gọi addEducation() lưu thẳng vào DB.
+    // - Mục thiếu trường -> pre-fill vào form "thêm mới" để user tự hoàn thiện.
+    if (cvEducations?.length > 0 && educations.length === 0) {
+      let pendingPrefill = null;
+
+      for (const edu of cvEducations) {
+        const isComplete =
+          edu.universityName &&
+          edu.fieldOfStudy &&
+          edu.passingYear &&
+          edu.result;
+
+        if (isComplete) {
+          try {
+            const { data } = await addEducation({
+              universityName: edu.universityName,
+              fieldOfStudy: edu.fieldOfStudy,
+              passingYear: Number(edu.passingYear),
+              result: edu.result,
+            });
+            setEducations((prev) => [...prev, data.data.education]);
+          } catch (err) {
+            console.error("[CV auto-add education]", err);
+          }
+        } else if (!pendingPrefill) {
+          pendingPrefill = edu;
+        }
+      }
+
+      if (pendingPrefill) {
+        setNewEdu({
+          universityName: pendingPrefill.universityName ?? "",
+          fieldOfStudy: pendingPrefill.fieldOfStudy ?? "",
+          passingYear: String(pendingPrefill.passingYear ?? ""),
+          result: pendingPrefill.result ?? "",
+        });
+      }
     }
 
     if (missing?.length > 0) {

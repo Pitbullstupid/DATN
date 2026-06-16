@@ -1,20 +1,51 @@
 import {
-  FiHome, FiUsers, FiBookOpen, FiCreditCard, FiStar,
-  FiCheckCircle, FiMenu, FiX, FiSettings, FiLogOut,
+  FiHome,
+  FiUsers,
+  FiBookOpen,
+  FiCreditCard,
+  FiStar,
+  FiCheckCircle,
+  FiMenu,
+  FiX,
+  FiSettings,
+  FiLogOut,
 } from "react-icons/fi";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export const buildNavItems = (pendingCount) => [
-  { key: "dashboard", label: "Tổng quan",    icon: FiHome },
-  { key: "users",     label: "Người dùng",   icon: FiUsers },
-  { key: "approvals", label: "Duyệt gia sư", icon: FiCheckCircle, badge: pendingCount },
-  { key: "courses",   label: "Khoá học",     icon: FiBookOpen },
-  { key: "payments",  label: "Thanh toán",   icon: FiCreditCard },
-  { key: "reviews",   label: "Đánh giá",     icon: FiStar },
-  { key: "subjects",  label: "Môn học",      icon: FiBookOpen },
+  { key: "dashboard", label: "Tổng quan", icon: FiHome },
+  { key: "users", label: "Người dùng", icon: FiUsers },
+  {
+    key: "approvals",
+    label: "Duyệt gia sư",
+    icon: FiCheckCircle,
+    badge: pendingCount,
+  },
+  { key: "courses", label: "Khoá học", icon: FiBookOpen },
+  { key: "payments", label: "Thanh toán", icon: FiCreditCard },
+  { key: "reviews", label: "Đánh giá", icon: FiStar },
+  { key: "subjects", label: "Môn học", icon: FiBookOpen },
 ];
 
-export default function AdminSidebar({ collapsed, setCollapsed, activeSection, setActiveSection, pendingCount }) {
+export default function AdminSidebar({
+  collapsed,
+  setCollapsed,
+  activeSection,
+  setActiveSection,
+  pendingCount,
+}) {
   const NAV_ITEMS = buildNavItems(pendingCount);
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } finally {
+      navigate("/");
+    }
+  };
 
   return (
     <aside
@@ -50,7 +81,9 @@ export default function AdminSidebar({ collapsed, setCollapsed, activeSection, s
             }`}
           >
             <Icon size={18} className="shrink-0" />
-            {!collapsed && <span className="flex-1 text-left truncate">{label}</span>}
+            {!collapsed && (
+              <span className="flex-1 text-left truncate">{label}</span>
+            )}
             {!collapsed && badge > 0 && (
               <span
                 className={`badge badge-sm ${
@@ -66,11 +99,19 @@ export default function AdminSidebar({ collapsed, setCollapsed, activeSection, s
 
       {/* Footer */}
       <div className="border-t border-base-200 p-3 space-y-0.5">
+        {!collapsed && user?.name && (
+          <div className="px-3 py-1.5 text-xs text-base-content/50 truncate">
+            {user.name}
+          </div>
+        )}
         <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-base-content/50 hover:bg-base-200 hover:text-base-content transition-all">
           <FiSettings size={17} className="shrink-0" />
           {!collapsed && <span>Cài đặt</span>}
         </button>
-        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-error/70 hover:bg-error/10 hover:text-error transition-all">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-error/70 hover:bg-error/10 hover:text-error transition-all"
+        >
           <FiLogOut size={17} className="shrink-0" />
           {!collapsed && <span>Đăng xuất</span>}
         </button>

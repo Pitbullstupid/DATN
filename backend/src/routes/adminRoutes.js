@@ -20,6 +20,7 @@ import {
   updateSubject,
   deleteSubject,
   isAdmin,
+  getChartData,
 } from "../controllers/adminControllers.js";
 import { authMiddleware } from "../middleware/adthMiddleware.js";
 
@@ -30,6 +31,7 @@ router.use(authMiddleware, isAdmin);
 
 // ── Thống kê ─────────────────────────────────────────────────
 router.get("/stats", getStats);
+router.get("/charts", getChartData);
 
 // ── Users ─────────────────────────────────────────────────────
 router.get("/users", getUsers);

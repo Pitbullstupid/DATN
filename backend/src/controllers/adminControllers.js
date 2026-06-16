@@ -651,12 +651,10 @@ export const processWithdrawal = async (req, res) => {
     const { status } = req.body;
     const allowed = ["PROCESSING", "COMPLETED", "FAILED"];
     if (!allowed.includes(status)) {
-      return res
-        .status(400)
-        .json({
-          status: "error",
-          message: `status phải là: ${allowed.join(", ")}`,
-        });
+      return res.status(400).json({
+        status: "error",
+        message: `status phải là: ${allowed.join(", ")}`,
+      });
     }
 
     const withdrawal = await prisma.withdrawal.findUnique({
@@ -722,12 +720,10 @@ export const processWithdrawal = async (req, res) => {
       );
     }
 
-    res
-      .status(200)
-      .json({
-        status: "success",
-        message: `Đã cập nhật trạng thái: ${status}`,
-      });
+    res.status(200).json({
+      status: "success",
+      message: `Đã cập nhật trạng thái: ${status}`,
+    });
   } catch (err) {
     res.status(500).json({ status: "error", message: err.message });
   }
@@ -911,6 +907,114 @@ export const deleteSubject = async (req, res) => {
     await prisma.subject.delete({ where: { id } });
 
     res.status(200).json({ status: "success", message: "Đã xoá môn học" });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// GET /admin/charts
+// Dữ liệu cho 4 biểu đồ ở DashboardSection:
+//   1. revenue[]        — doanh thu theo tháng (12 tháng gần nhất)
+//   2. newUsers[]       — người dùng mới theo tháng (12 tháng gần nhất)
+//   3. courseStatus[]   — phân bổ trạng thái khoá học
+//   4. starDist[]       — phân bổ đánh giá sao 1–5
+// ─────────────────────────────────────────────────────────────
+export const getChartData = async (req, res) => {
+  try {
+    const now = new Date();
+    // Lấy ngày đầu của 12 tháng trước (tháng hiện tại - 11)
+    const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+
+    const [paymentsRaw, usersRaw, courseStatusRaw, reviewsRaw] =
+      await prisma.$transaction([
+        // 1. Payments PAID/RELEASED trong 12 tháng
+        prisma.payment.findMany({
+          where: {
+            status: { in: ["PAID", "RELEASED"] },
+            createdAt: { gte: twelveMonthsAgo },
+          },
+          select: { amount: true, createdAt: true },
+        }),
+        // 2. Users mới trong 12 tháng
+        prisma.user.findMany({
+          where: {
+            createdAt: { gte: twelveMonthsAgo },
+            role: { in: ["STUDENT", "TUTOR"] },
+          },
+          select: { role: true, createdAt: true },
+        }),
+        // 3. Khoá học theo trạng thái (toàn bộ)
+        prisma.courseClass.groupBy({
+          by: ["status"],
+          _count: { id: true },
+        }),
+        // 4. Đánh giá theo số sao (toàn bộ)
+        prisma.review.groupBy({
+          by: ["rating"],
+          _count: { id: true },
+          orderBy: { rating: "asc" },
+        }),
+      ]);
+
+    // ── Build 12-month label array ──────────────────────────
+    const months = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({
+        key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+        label: `T${d.getMonth() + 1}`,
+      });
+    }
+
+    // ── 1. Revenue by month ─────────────────────────────────
+    const revenueMap = {};
+    for (const p of paymentsRaw) {
+      const key = `${p.createdAt.getFullYear()}-${String(p.createdAt.getMonth() + 1).padStart(2, "0")}`;
+      revenueMap[key] = (revenueMap[key] ?? 0) + Number(p.amount);
+    }
+    const revenue = months.map(({ key, label }) => ({
+      month: label,
+      value: Math.round(revenueMap[key] ?? 0),
+    }));
+
+    // ── 2. New users by month ───────────────────────────────
+    const tutorsMap = {};
+    const studentsMap = {};
+    for (const u of usersRaw) {
+      const key = `${u.createdAt.getFullYear()}-${String(u.createdAt.getMonth() + 1).padStart(2, "0")}`;
+      if (u.role === "TUTOR") tutorsMap[key] = (tutorsMap[key] ?? 0) + 1;
+      if (u.role === "STUDENT") studentsMap[key] = (studentsMap[key] ?? 0) + 1;
+    }
+    const newUsers = months.map(({ key, label }) => ({
+      month: label,
+      tutors: tutorsMap[key] ?? 0,
+      students: studentsMap[key] ?? 0,
+    }));
+
+    // ── 3. Course status distribution ──────────────────────
+    const STATUS_LABEL = {
+      PENDING_PAYMENT: "Chờ thanh toán",
+      UPCOMING: "Sắp tới",
+      ONGOING: "Đang học",
+      COMPLETED: "Hoàn thành",
+      CANCELLED: "Đã huỷ",
+    };
+    const courseStatus = courseStatusRaw.map((r) => ({
+      name: STATUS_LABEL[r.status] ?? r.status,
+      value: r._count.id,
+    }));
+
+    // ── 4. Star distribution ────────────────────────────────
+    const starDist = [1, 2, 3, 4, 5].map((star) => {
+      const found = reviewsRaw.find((r) => r.rating === star);
+      return { star: `${star}★`, count: found?._count.id ?? 0 };
+    });
+
+    res.status(200).json({
+      status: "success",
+      data: { revenue, newUsers, courseStatus, starDist },
+    });
   } catch (err) {
     res.status(500).json({ status: "error", message: err.message });
   }

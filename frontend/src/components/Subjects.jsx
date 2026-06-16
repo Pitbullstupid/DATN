@@ -15,9 +15,11 @@ import {
 import { useRef } from "react";
 import { GrFormPrevious, GrFormNext } from "react-icons/gr";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 const Courses = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const CATEGORIES = [
     { id: "math", label: t("categories.Mathematics"), img: math },
@@ -37,8 +39,8 @@ const Courses = () => {
   const next = () => splideRef.current?.splide?.go(">");
 
   return (
-    <section className="flex flex-col items-center py-12 px-4 bg-base-200">
-      <div className="w-14 h-1 bg-primary rounded-full mb-6" />
+    <section className="flex flex-col items-center py-12 px-4 bg-base/50">
+      <div className="w-14 h-1 bg-primary rounded-full mb-6"  /> {/* Decorative line */}
 
       <h2 className="text-3xl font-bold text-primary text-center mb-3">
         {t("categories.title")}
@@ -61,7 +63,7 @@ const Courses = () => {
           Nếu thiếu minWidth:0, flex child sẽ không shrink đúng
           → slide đầu bị tràn ra ngoài
         */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0 }} onClick={() => navigate(`/tutors`)}>
           <Splide
             ref={splideRef}
             options={{
@@ -89,7 +91,7 @@ const Courses = () => {
           >
             {CATEGORIES.map((cat) => (
               <SplideSlide key={cat.id}>
-                <div
+                <div 
                   style={{
                     display: "flex",
                     flexDirection: "column",

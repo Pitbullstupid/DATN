@@ -457,6 +457,7 @@ export const getAllTutors = async (req, res) => {
         orderBy: { rating: "desc" },
         select: {
           id: true,
+          bio: true,
           subjects: true,
           preferredAreas: true,
           pricePerHour: true,
